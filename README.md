@@ -95,15 +95,3 @@ sudo ./mini-firecracker
 ```
 
 or add your user to the `kvm` group.
-
-## Publish As GitHub Pages
-
-Push this directory as a repository, then in GitHub:
-
-1. Open repository settings.
-2. Go to Pages.
-3. Choose Deploy from a branch.
-4. Select your branch and `/docs`.
-5. Save.
-
-GitHub will serve `docs/index.html`.

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini Kernel Course - Mini Isolation Lab</title>
+  <meta name="description" content="A practical operating-system course using Mini Kernel as the learning material: boot sectors, stage2 loading, kernel boundaries, and the road to POSIX.">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand"><h1>Mini Isolation Lab</h1><p>Containers, microVMs, and now a tiny OS kernel from first principles.</p></div>
+      <div class="nav-label">Course Index</div>
+      <nav aria-label="Kernel course sections"><ol class="course-nav">
+        <li><a class="active" href="./"><span class="num">K0</span><span>Mini Kernel</span></a><ul class="subparts"><li>boot sector</li><li>stage2 monitor</li><li>kernel objects</li></ul></li>
+        <li><a href="../parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>POSIX boundary</li><li>write(2)</li><li>kernel entry</li></ul></li>
+        <li><a href="../parts/part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>pages</li><li>mmap</li><li>guest RAM</li></ul></li>
+        <li><a href="../"><span class="num">LAB</span><span>Isolation Lab Home</span></a></li>
+      </ol></nav>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <div class="article">
+          <div class="part-label">operating systems course</div>
+          <h2>Mini Kernel</h2>
+          <p>Mini Kernel is the course's tiny operating-system specimen: a bootable BIOS image, a second-stage monitor, and a freestanding C kernel scaffold. The point is not to pretend it is Linux. The point is to make the boot path, kernel boundary, memory model, and POSIX roadmap visible enough to learn from.</p>
+        </div>
+      </header>
+
+      <article class="article">
+        <h3>What You Build</h3>
+        <p>The current source lives in <code>mini-kernel/</code>. It builds a raw image named <code>build/mini-kernel.img</code>. The image begins with a 512-byte BIOS boot sector, followed by a padded stage2 monitor. The C kernel code also compiles as freestanding x86_64 objects, ready for the later ELF bootloader path.</p>
+        <pre><code class="language-text">mini-kernel/
+  boot/bootsector.S      BIOS entry at byte 0 of the disk image
+  boot/stage2.S          tiny text monitor loaded by the boot sector
+  boot/multiboot2.S      metadata for a future bootloader-loaded ELF kernel
+  boot/linker.ld         section layout for that ELF kernel
+  kernel/main.c          freestanding C kernel entry and serial logging
+  kernel/arch/x86_64/    port I/O, serial, and halt helpers
+  kernel/lib/            checked memory and string primitives
+  tests/                 host-side tests for portable kernel logic</code></pre>
+
+        <h3>Boot, In Plain English</h3>
+        <p>A normal program starts because an existing OS loader creates a process. This kernel starts before any process exists. On a BIOS-style machine, firmware reads the first 512 bytes of the disk into memory at physical address <code>0x7c00</code> and jumps there. Those 512 bytes are <code>bootsector.bin</code>.</p>
+        <p>The boot sector is tiny because BIOS only gives it one sector. Its job is to set predictable segment registers, remember the BIOS drive number, print a short status line, read stage2 from the next sectors into memory at <code>0800:0000</code>, and jump there.</p>
+        <p><code>stage2.bin</code> exists because serious setup does not fit comfortably in 512 bytes. Today it is a small monitor with commands like <code>help</code>, <code>about</code>, <code>clear</code>, <code>halt</code>, and <code>reboot</code>. Later it is the right place to set up protected mode or long mode, load the higher-level kernel, and pass boot information forward.</p>
+        <pre><code class="language-text">build/mini-kernel.img
+  offset 0       bootsector.bin, exactly 512 bytes, ends in 55 aa
+  offset 512     stage2.bin, padded to full 512-byte sectors</code></pre>
+
+        <h3>Why There Are Multiple Binaries</h3>
+        <p><code>bootsector.bin</code> is a raw 16-bit machine-code sector. BIOS does not understand C objects, ELF metadata, or Rust crates; it only checks that the first sector ends with the boot signature <code>55 aa</code> and then executes it.</p>
+        <p><code>stage2.bin</code> is also raw machine code, but it is loaded by our boot sector instead of by firmware. It gives the project room for real initialization.</p>
+        <p><code>mini-kernel.elf</code> is the future bootloader-friendly kernel image. ELF is useful because it has sections such as text, rodata, data, and bss. That is the format a bootloader like GRUB or Limine can load cleanly once an ELF linker and emulator are available locally.</p>
+
+        <h3>Run The Local Build</h3>
+        <pre><code class="language-bash">cd mini-kernel
+make all</code></pre>
+        <p>That runs host tests, builds the raw BIOS image, validates the 512-byte boot signature, validates stage2 sector padding, and compiles the freestanding kernel objects.</p>
+        <p>When <code>qemu-system-x86_64</code> is installed, boot the raw image with:</p>
+        <pre><code class="language-bash">cd mini-kernel
+make run-image</code></pre>
+
+        <h3>POSIX Support Roadmap</h3>
+        <p>You asked for POSIX support. That is the right ambition, but POSIX is not a switch; it is a stack of kernel features plus a C library ABI. Mini Kernel should grow toward a small POSIX-like subset in layers:</p>
+        <ol>
+          <li>Console and serial devices: enough for <code>read</code> and <code>write</code>.</li>
+          <li>Interrupts, timer, and scheduler: enough for sleeping and process lifecycle.</li>
+          <li>Virtual memory and user mode: separate kernel and process address spaces.</li>
+          <li>Syscall ABI: stable entry from user programs into the kernel.</li>
+          <li>File descriptors: stdin, stdout, stderr, pipes, and device handles.</li>
+          <li>Process model: <code>fork</code>-like creation or a simpler <code>spawn</code> first, then <code>exec</code> and <code>wait</code>.</li>
+          <li>Filesystem namespace: paths, directories, metadata, and a tiny initial RAM filesystem.</li>
+          <li>libc surface: enough headers and wrappers for small POSIX-style programs.</li>
+        </ol>
+        <p>The first compatibility target should be a tiny subset: <code>write</code>, <code>read</code>, <code>exit</code>, <code>open</code>, <code>close</code>, <code>stat</code>, <code>getpid</code>, and a simple <code>spawn</code>. Full POSIX means signals, terminals, permissions, time, sockets, and many edge cases; that comes much later.</p>
+
+        <h3>Why C First, Not Rust Or Zig First?</h3>
+        <p>The first implementation uses C and assembly because this machine already has a working no-network C/LLVM path for freestanding x86 objects and raw boot binaries. The available Rust install does not currently include the bare-metal <code>core</code> libraries or <code>rustup</code> target management needed for comfortable <code>no_std</code> x86_64 kernel work. Zig is not installed locally.</p>
+        <p>C is also useful pedagogically: it keeps the ABI, pointers, memory layout, and binary formats very visible. That is exactly what an OS course needs at the beginning. The tradeoff is that C gives fewer memory-safety guarantees, so this project keeps C narrow, uses checked helpers, treats hardware access as an explicit boundary, and tests portable logic on the host.</p>
+        <p>Rust is still a good future direction. Once the target libraries and linker path are available, Rust can take over larger kernel modules where ownership and bounds checks help. Zig could also be a strong fit because its cross-compilation story is good. The order is practical, not ideological: boot with what the local toolchain can build today, then introduce safer languages where they reduce risk.</p>
+
+        <h3>Course Path</h3>
+        <div class="lesson-list">
+          <a href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/README.md"><span class="num">K0</span><span>Read the Mini Kernel source map</span><span>source</span></a>
+          <a href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/boot/bootsector.S"><span class="num">K1</span><span>Follow the BIOS boot sector</span><span>asm</span></a>
+          <a href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/boot/stage2.S"><span class="num">K2</span><span>Trace the stage2 monitor</span><span>asm</span></a>
+          <a href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/main.c"><span class="num">K3</span><span>Enter the freestanding C kernel</span><span>c</span></a>
+          <a href="../parts/part-01-syscalls.html"><span class="num">K4</span><span>Connect kernel work to POSIX syscalls</span><span>lesson</span></a>
+        </div>
+
+        <h3>Security Notes</h3>
+        <p>The current OS is a teaching kernel, not a hardened system. The secure path is to add protections early: no writable-executable mappings, user/kernel address-space separation, checked syscall arguments, small driver interfaces, panic-on-invariant failure, and tests for allocator and page-table code before running untrusted programs.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

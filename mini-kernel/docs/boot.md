@@ -1,0 +1,126 @@
+# Boot And Run
+
+The intended full path is a freestanding x86_64 kernel loaded by a bootloader
+and tested in QEMU. The current no-network path also builds a raw BIOS disk
+image before an ELF linker is installed. That image uses a 512-byte boot sector
+at LBA 0 and a second-stage monitor at LBA 1 and above.
+
+## Optional Tools
+
+- `ld.lld`: linker for freestanding ELF64 kernels.
+- `qemu-system-x86_64`: emulator for local boot tests.
+- `limine`: bootloader files and ISO image helpers.
+- `xorriso`: commonly used when producing BIOS/UEFI bootable ISO images.
+
+The local machine currently has Homebrew LLVM's `llvm-objcopy`, so `make all`
+can build and validate the raw image without network downloads.
+
+## Current No-Network Flow
+
+```sh
+make all
+```
+
+This runs host tests, validates `build/mini-kernel.img`, and compiles kernel
+objects. The image can be run later with:
+
+```sh
+make run-image
+```
+
+That target requires `qemu-system-x86_64`.
+
+## Raw BIOS Image Path
+
+For a boot path without an ISO bootloader, keep the disk layout simple:
+
+```text
+LBA 0      512-byte BIOS boot sector with 55 aa signature
+LBA 1..n   stage2 binary, padded to 512-byte sectors
+```
+
+The boot sector preserves the BIOS drive number, reads the padded stage2 from
+sector 2 using BIOS `int 13h`, and jumps to `0800:0000`. Stage2 sets its own
+segment state and provides a tiny monitor.
+
+Build the image with:
+
+```sh
+make image
+```
+
+Run that image in QEMU with:
+
+```sh
+make run-image
+```
+
+Keep the boot sector small. Put protected-mode or long-mode setup in stage2
+unless there is a strong reason not to.
+
+## Expected Kernel Build Flow
+
+1. Compile C or Rust kernel objects for a freestanding x86_64 target.
+2. Link the kernel with a linker script into an ELF64 image.
+3. Stage the kernel, `limine.conf`, and Limine boot files into an ISO directory.
+4. Create a bootable ISO or disk image.
+5. Run the image with QEMU.
+
+For C builds, typical flags include:
+
+```sh
+-ffreestanding -mno-red-zone -fno-pic -fno-pie
+```
+
+For Rust builds, use a custom target or a known bare-metal x86_64 target with:
+
+```toml
+panic = "abort"
+```
+
+The linker should set the Limine entry point and place kernel sections at the
+virtual and physical addresses expected by the boot protocol.
+
+## Limine Configuration
+
+A minimal `limine.conf` normally names the kernel path and protocol. This repo
+currently uses a Multiboot2-compatible entry while keeping the file easy to
+adapt for Limine-native boot later:
+
+```text
+TIMEOUT=0
+
+:mini-kernel
+    PROTOCOL=multiboot2
+    KERNEL_PATH=boot:///mini-kernel.elf
+```
+
+Keep boot configuration small until multiple kernels, modules, or command-line
+options are needed.
+
+## QEMU Smoke Test
+
+Once an image exists, a basic run command is:
+
+```sh
+qemu-system-x86_64 -drive format=raw,file=build/mini-kernel.img -serial stdio
+```
+
+Useful additions while debugging:
+
+```sh
+-no-reboot -no-shutdown -d int
+```
+
+If the kernel writes to a framebuffer instead of serial, keep serial logging
+available for faults and CI smoke tests.
+
+## Troubleshooting
+
+- Immediate reset usually means a triple fault; check the IDT, stack, and entry
+  address.
+- No Limine response usually means the request structure was not retained,
+  aligned, or placed in the expected section.
+- Linker errors usually mean the linker script and object format disagree.
+- QEMU boot failure usually means the ISO was not made bootable or Limine files
+  were not installed into the image.

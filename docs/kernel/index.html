@@ -379,6 +379,44 @@
     .call-table td { color: var(--muted); }
     .call-table td:first-child { color: var(--green); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
+    .course-track {
+      display: grid;
+      gap: 12px;
+    }
+
+    .chapter {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(21, 27, 35, 0.92), rgba(10, 15, 20, 0.92));
+      padding: 18px;
+    }
+
+    .chapter-index {
+      color: var(--amber);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      font-weight: 900;
+    }
+
+    .chapter h3 {
+      margin-bottom: 6px;
+      font-size: 1.12rem;
+      line-height: 1.2;
+    }
+
+    .chapter p {
+      color: var(--muted);
+    }
+
+    .checkpoint {
+      margin-top: 10px;
+      color: var(--green);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.84rem;
+    }
+
     .footer {
       width: min(var(--max), calc(100% - 40px));
       margin: 0 auto;
@@ -411,6 +449,7 @@
       .topbar-inner { align-items: flex-start; flex-direction: column; padding: 12px 0; }
       .nav { justify-content: flex-start; }
       .segment { grid-template-columns: 1fr; }
+      .chapter { grid-template-columns: 1fr; }
       pre { font-size: 0.82rem; }
     }
   </style>
@@ -423,6 +462,7 @@
         <nav class="nav" aria-label="Page sections">
           <a href="#boot">Boot</a>
           <a href="#image">Image</a>
+          <a href="course/">Course</a>
           <a href="#userspace">Userspace</a>
           <a href="#syscalls">Syscalls</a>
           <a href="#source">Source</a>
@@ -438,6 +478,7 @@
           <p class="hero-copy">A standalone kernel workbench built around a tiny bootable image, a second-stage monitor, freestanding kernel objects, a read-only in-memory filesystem, and a syscall-like dispatcher small enough to inspect line by line.</p>
           <div class="hero-actions">
             <a class="button primary" href="https://github.com/chud-lori/mini-isolation-lab/tree/main/mini-kernel">Source</a>
+            <a class="button" href="course/">Read the course</a>
             <a class="button" href="#syscalls">Read the dispatcher</a>
             <a class="button" href="#run">Build commands</a>
           </div>
@@ -503,6 +544,7 @@ kernel objects:
           </div>
         </div>
       </section>
+
 
       <section class="section" id="userspace">
         <div class="section-header">

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 07: Mini Container - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a class="active" href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 07</div><h2>Mini Container: Combining The Linux Primitives</h2><a class="source-link" data-src="src/part-07-container/mini_container.c" href="../../src/part-07-container/mini_container.c">view source</a>
+<p>This part combines the previous lessons into a small container runner. It is not Docker, containerd, or runc, but the skeleton is recognizable: create an isolated child, prepare its filesystem view, mount `/proc`, apply limits, and execute the requested command.</p>
+<h3>The Namespace Set</h3><pre><code class="language-c">CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS |
+CLONE_NEWIPC | CLONE_NEWNET | SIGCHLD</code></pre>
+<p>UTS isolates hostname. PID gives the child a private process-ID view. Mount gives it a private mount table. IPC isolates certain communication resources. Network creates a separate network namespace. `SIGCHLD` keeps the child waitable.</p>
+<h3>Parent And Child Synchronization</h3><p>The program creates a pipe before `clone`. The child waits on that pipe. The parent tries to create and configure a cgroup, moves the child into it, then writes one byte to let the child continue. This avoids letting the child run too far before limits are applied.</p>
+<h3>Child Setup Sequence</h3><p>The child sets the hostname, marks mounts private, calls `chroot`, changes to `/`, creates `/proc` if needed, mounts the proc filesystem, and then calls `execvp`. After `execvp`, the setup program is replaced by your command.</p>
+<pre><code class="language-text">clone child
+  wait for parent
+  set hostname
+  make mounts private
+  chroot rootfs
+  mount /proc
+  exec command</code></pre>
+<h3>Run It</h3><pre><code class="language-bash">make mini-container
+mkdir -p rootfs/bin
+cp /bin/busybox rootfs/bin/
+ln -s busybox rootfs/bin/sh
+ln -s busybox rootfs/bin/ps
+ln -s busybox rootfs/bin/hostname
+ln -s busybox rootfs/bin/mount
+sudo ./mini-container ./rootfs /bin/sh</code></pre>
+<p>Inside the container, try `hostname`, `echo $$`, `ps`, and `mount`. Compare those with the same commands on the host.</p>
+<h3>What Is Missing</h3><p>This demo does not drop capabilities, configure seccomp, set up user namespaces, configure AppArmor or SELinux, create veth networking, parse OCI configs, pull images, or manage layers. Those omissions are deliberate: this lesson is about seeing the kernel building blocks clearly.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to describe the full startup sequence and explain why this is container-like but not a production sandbox.</p></div>
+<div class="next-prev"><a href="part-06-cgroups.html">Previous: Cgroups</a><a href="part-08-kvm.html">Next: KVM API</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

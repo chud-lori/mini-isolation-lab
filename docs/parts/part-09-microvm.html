@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 09: Mini Firecracker - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a class="active" href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 09</div><h2>Mini Firecracker: A Tiny VMM Event Loop</h2><a class="source-link" data-src="src/part-09-microvm/mini_firecracker.c" href="../../src/part-09-microvm/mini_firecracker.c">view source</a>
+<p>Firecracker is a production virtual machine monitor for microVMs. This lesson does not recreate Firecracker. Instead, it builds the smallest useful VMM shape: create a VM, allocate guest memory, create a vCPU, run guest code, handle exits, and resume.</p>
+<h3>The Core Loop</h3><pre><code class="language-text">while guest is alive:
+  KVM_RUN
+  inspect exit reason
+  emulate device or event
+  resume guest</code></pre>
+<p>While the guest runs ordinary CPU instructions, the host VMM is not interpreting every instruction. KVM and the CPU run guest code directly under virtualization controls. The VMM becomes active when KVM exits to userspace.</p>
+<h3>Guest Memory</h3><p>The program allocates memory with `mmap`, copies tiny x86 guest code into it, and registers the region with KVM using `KVM_SET_USER_MEMORY_REGION`. The host sees process memory. The guest sees RAM.</p>
+<h3>The Fake Device</h3><p>The guest writes bytes to I/O port `0xe9`. KVM exits with `KVM_EXIT_IO`. The VMM reads the byte from the shared `kvm_run` structure and prints it. That fake debug port is a tiny version of virtual device emulation.</p>
+<pre><code class="language-c">case KVM_EXIT_IO:
+    handle_io_exit(run);
+    break;</code></pre>
+<h3>Run It</h3><pre><code class="language-bash">make mini-firecracker
+./mini-firecracker</code></pre>
+<p>Expected output:</p><pre><code class="language-text">host VMM: starting vCPU
+hello from a tiny microVM
+host VMM: guest halted</code></pre>
+<h3>How This Maps To Firecracker</h3><p>Real Firecracker boots a Linux kernel, attaches virtio block and network devices, exposes a local API, supports snapshots, emits metrics, and applies jailer/seccomp/cgroup restrictions. But the core idea is still recognizable: KVM runs guest CPU code, the VMM owns virtual machine configuration, and virtual device events are handled by userspace.</p>
+<h3>Why MicroVMs Are More Isolated Than Containers</h3><p>A containerized app makes syscalls to the host kernel. A microVM app makes syscalls to the guest kernel. The host mostly sees virtual CPU, memory, and device interactions. That extra kernel boundary is why microVMs are attractive for untrusted or multi-tenant workloads.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain `KVM_RUN`, VM exits, fake device emulation, and why a microVM is a VM even though Firecracker is just a host process.</p></div>
+<div class="next-prev"><a href="part-08-kvm.html">Previous: KVM API</a><a href="../index.html">Back to index</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

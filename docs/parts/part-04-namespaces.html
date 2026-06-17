@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 04: Namespaces - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a class="active" href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 04</div><h2>Namespaces: A Different View Of The Same Kernel</h2><a class="source-link" data-src="src/part-04-namespaces/uts_namespace.c" href="../../src/part-04-namespaces/uts_namespace.c">view source</a>
+<p>A namespace gives a process a scoped view of one kind of kernel resource. This is the most important container idea: the process is still running on the host kernel, but the kernel answers some questions differently for that process.</p>
+<p>The first namespace in the course is UTS, which controls hostname and domain name. It is easy to observe and does not require building a filesystem or network setup.</p>
+<h3>The One-Flag Difference</h3><pre><code class="language-c">clone(child_main, stack + STACK_SIZE, CLONE_NEWUTS | SIGCHLD, NULL)</code></pre>
+<p>The child calls `sethostname`, then reads the hostname back. The parent reads the hostname before and after the child runs. The child's hostname changes. The parent's hostname does not.</p>
+<h3>What This Proves</h3><p>The host was not renamed. There is no second kernel. There is only one Linux kernel presenting different UTS namespace state to different processes.</p>
+<p>Other namespaces use the same basic idea. PID namespaces change process visibility. Mount namespaces change mount-table visibility. Network namespaces change interfaces, routes, and sockets. IPC namespaces change certain inter-process communication resources.</p>
+<h3>Run It</h3><pre><code class="language-bash">make part-04-namespaces
+sudo ./part-04-namespaces</code></pre>
+<p>Expected output:</p><pre><code class="language-text">parent sees hostname before clone: my-host
+child sees hostname: part-04-namespace
+parent still sees hostname: my-host</code></pre>
+<h3>Container Connection</h3><p>A container combines several namespaces. One namespace alone is not a useful container, but it gives you the pattern: isolate one view, verify the parent is unchanged, then add more isolated views until the process feels like it has its own small machine.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain why namespaces are views, not VMs, and why changing hostname in the child does not rename the host.</p></div>
+<div class="next-prev"><a href="part-03-processes.html">Previous: Processes</a><a href="part-05-rootfs.html">Next: Rootfs</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

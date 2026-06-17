@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 08: KVM API - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a class="active" href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 08</div><h2>KVM API: Asking Linux To Create VMs</h2><a class="source-link" data-src="src/part-08-kvm/kvm_api_version.c" href="../../src/part-08-kvm/kvm_api_version.c">view source</a>
+<p>Containers share the host kernel. MicroVMs do not. A microVM has a guest kernel running on virtual hardware. On Linux, the usual way to run guest CPU code efficiently is KVM.</p>
+<p>KVM is not a complete VM product. It is a kernel virtualization interface. A userspace VMM such as Firecracker or QEMU opens `/dev/kvm`, sends commands with `ioctl`, creates VM state, creates vCPUs, maps memory, and runs guest code.</p>
+<h3>Why /dev/kvm Is A File</h3><p>Linux exposes many kernel interfaces through file descriptors. `/dev/kvm` looks like a file path, but the operations are device commands. `ioctl(kvm_fd, KVM_GET_API_VERSION, 0)` asks the KVM driver for its API version.</p>
+<pre><code class="language-c">int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+int version = ioctl(kvm_fd, KVM_GET_API_VERSION, 0);</code></pre>
+<h3>What The Source Checks</h3><p>The program compares the kernel's KVM API version with `KVM_API_VERSION` from the headers used to compile the program. If they do not match, the userspace code and kernel interface may not agree.</p>
+<h3>Run It</h3><pre><code class="language-bash">make part-08-kvm
+./part-08-kvm</code></pre>
+<p>If permission is denied, run with `sudo` for learning or add your user to the `kvm` group and log in again.</p>
+<pre><code class="language-bash">sudo usermod -aG kvm "$USER"</code></pre>
+<h3>If /dev/kvm Is Missing</h3><p>The host may not support hardware virtualization, virtualization may be disabled in firmware, the KVM kernel module may not be loaded, or your VM/cloud provider may not expose nested virtualization.</p>
+<h3>Connection To Firecracker</h3><p>Firecracker is a host process. It still needs `/dev/kvm` because KVM is what lets guest CPU instructions run efficiently and safely under host control. Firecracker supplies the minimal device model and policy around that KVM core.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain why KVM is a kernel interface, why Firecracker is userspace, and why both pieces are needed.</p></div>
+<div class="next-prev"><a href="part-07-container.html">Previous: Mini Container</a><a href="part-09-microvm.html">Next: Mini Firecracker</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

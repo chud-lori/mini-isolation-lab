@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 04: Namespaces - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
-<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
-<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
-<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
-<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
-<li><a class="active" href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
-<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
-<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
-<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
-<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
-<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol class="course-nav">
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
+<li><a class="active" href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a><ul class="subparts"><li>UTS namespace</li><li>isolated hostname</li><li>namespace mental model</li></ul></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a><ul class="subparts"><li>chroot path lookup</li><li>BusyBox rootfs</li><li>rootfs limitations</li></ul></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a><ul class="subparts"><li>cgroup v2 files</li><li>memory.max and pids.max</li><li>resource isolation</li></ul></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
 </ol></nav></aside><main><article class="article">
 <div class="part-label">Part 04</div><h2>Namespaces: A Different View Of The Same Kernel</h2><details class="source-panel"><summary>Show source: src/part-04-namespaces/uts_namespace.c</summary><pre><code class="language-c">#define _GNU_SOURCE
 

@@ -3,271 +3,475 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Isolation Lab: Containers and MicroVMs From First Principles</title>
-  <meta name="description" content="A beginner-friendly tutorial for engineers learning Linux containers, syscalls, memory allocation, KVM, and Firecracker-style microVMs.">
+  <title>Mini Isolation Lab</title>
+  <meta name="description" content="A beginner-friendly course for learning Linux containers, syscalls, memory, KVM, and Firecracker-style microVMs.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fb;
-      --panel: #ffffff;
-      --ink: #1f2937;
-      --muted: #5b6472;
-      --line: #d9dee8;
-      --code-bg: #101820;
-      --code-ink: #e8eef7;
-      --accent: #0f766e;
-      --accent-2: #b45309;
-      --soft: #e8f3f1;
-      --warn: #fff7ed;
+      --page: #f4f1eb;
+      --paper: #fffdf8;
+      --paper-2: #f8f3ea;
+      --ink: #202124;
+      --muted: #66615a;
+      --line: #ded6c9;
+      --line-strong: #c9bea9;
+      --code: #111315;
+      --code-ink: #eff3f5;
+      --accent: #1c6b68;
+      --accent-dark: #114a48;
+      --warm: #8a4b16;
+      --mark: #f3d36b;
+      --shadow: 0 14px 34px rgba(44, 35, 24, 0.08);
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
-      background: var(--bg);
+      background:
+        linear-gradient(90deg, rgba(32, 33, 36, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
+        var(--page);
       color: var(--ink);
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.65;
+      font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+      line-height: 1.72;
     }
 
     a {
       color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
     }
 
-    header {
-      background: #10202b;
-      color: #f8fafc;
-      padding: 56px 24px 44px;
-      border-bottom: 6px solid var(--accent);
+    code,
+    pre,
+    .mono,
+    .part-number,
+    .crumb,
+    .source-link {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
 
-    header .wrap,
+    .layout {
+      display: grid;
+      grid-template-columns: 318px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+      background: #f9f5ed;
+      padding: 28px 22px;
+    }
+
+    .brand {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+    }
+
+    .brand .crumb {
+      color: var(--warm);
+      font-size: 0.76rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 7px 0 8px;
+      font-size: 1.78rem;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .nav-label {
+      margin: 22px 0 10px;
+      color: var(--warm);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    nav ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    nav a {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 10px;
+      align-items: baseline;
+      padding: 9px 10px;
+      border-radius: 6px;
+      color: var(--ink);
+      text-decoration: none;
+      line-height: 1.28;
+    }
+
+    nav a:hover,
+    nav a:focus {
+      background: #efe7da;
+      outline: none;
+    }
+
+    .part-number {
+      color: var(--accent-dark);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .nav-title {
+      font-size: 0.94rem;
+    }
+
     main {
-      width: min(1100px, calc(100% - 32px));
+      min-width: 0;
+    }
+
+    .hero {
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(28, 107, 104, 0.11), transparent 46%),
+        var(--paper);
+      padding: 56px 42px 42px;
+    }
+
+    .article {
+      width: min(860px, calc(100% - 48px));
       margin: 0 auto;
     }
 
-    h1 {
-      max-width: 900px;
-      margin: 0 0 14px;
-      font-size: clamp(2.1rem, 5vw, 4.8rem);
-      line-height: 1.02;
-      letter-spacing: 0;
+    .hero .article {
+      margin: 0;
+      width: min(920px, 100%);
     }
 
-    header p {
+    .kicker {
+      color: var(--warm);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    h2,
+    h3 {
+      letter-spacing: 0;
+      line-height: 1.16;
+    }
+
+    .hero h2 {
+      margin: 10px 0 16px;
+      max-width: 780px;
+      font-size: clamp(2.35rem, 7vw, 5.6rem);
+    }
+
+    .hero p {
       max-width: 760px;
       margin: 0;
-      color: #d6e1ea;
-      font-size: 1.08rem;
+      color: #393a3d;
+      font-size: 1.14rem;
     }
 
-    main {
-      padding: 28px 0 64px;
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 900px;
+      margin-top: 28px;
     }
 
-    nav {
-      background: var(--panel);
+    .stat {
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 18px;
-      margin-bottom: 24px;
+      background: rgba(255, 253, 248, 0.78);
+      padding: 14px;
     }
 
-    nav ul {
-      columns: 2;
-      margin: 0;
-      padding-left: 20px;
+    .stat strong {
+      display: block;
+      font-size: 1.25rem;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.94rem;
     }
 
     section {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 26px;
-      margin: 20px 0;
+      padding: 42px 0;
+      border-bottom: 1px solid var(--line);
     }
 
-    h2 {
+    section h2 {
       margin: 0 0 14px;
-      font-size: 1.65rem;
-      line-height: 1.2;
-      letter-spacing: 0;
+      font-size: 2.1rem;
     }
 
-    h3 {
-      margin: 28px 0 10px;
-      font-size: 1.15rem;
-      line-height: 1.25;
-      letter-spacing: 0;
+    section h3 {
+      margin: 26px 0 8px;
+      font-size: 1.24rem;
     }
 
     p {
-      margin: 0 0 14px;
+      margin: 0 0 15px;
+      font-size: 1.05rem;
     }
 
     ul,
     ol {
-      margin-top: 8px;
       padding-left: 24px;
     }
 
     li {
-      margin: 6px 0;
+      margin: 7px 0;
+    }
+
+    .lesson {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin: 22px 0;
+    }
+
+    .lesson-header {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+
+    .lesson-title {
+      min-width: 0;
+    }
+
+    .lesson-title .part-number {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .lesson-title h3 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .source-link {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--accent-dark);
+      background: #eef7f5;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .source-link:hover,
+    .source-link:focus {
+      background: #dcefeb;
+      outline: none;
+    }
+
+    .diagram {
+      overflow-x: auto;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: var(--paper-2);
+      padding: 16px;
+      white-space: pre;
+      line-height: 1.42;
+      font-size: 0.92rem;
+    }
+
+    pre,
+    pre[class*="language-"] {
+      overflow-x: auto;
+      border-radius: 8px;
+      background: var(--code);
+      color: var(--code-ink);
+      padding: 17px;
+      line-height: 1.48;
+      font-size: 0.92rem;
     }
 
     code {
-      background: #eef2f7;
       border-radius: 4px;
-      padding: 0.12rem 0.28rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #ede6da;
+      padding: 0.1rem 0.26rem;
       font-size: 0.92em;
     }
 
-    pre {
-      overflow-x: auto;
-      background: var(--code-bg);
-      color: var(--code-ink);
-      padding: 16px;
-      border-radius: 8px;
-      margin: 14px 0 18px;
-      line-height: 1.45;
-    }
-
-    pre code {
+    pre code,
+    pre[class*="language-"] code {
       background: transparent;
-      color: inherit;
       padding: 0;
-      font-size: 0.9rem;
+      color: inherit;
+      text-shadow: none;
     }
 
-    table {
+    .callout {
+      border-left: 5px solid var(--accent);
+      border-radius: 6px;
+      background: #eef7f5;
+      padding: 15px 17px;
+      margin: 18px 0;
+    }
+
+    .callout.warning {
+      border-left-color: var(--warm);
+      background: #fff4df;
+    }
+
+    .compare {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0;
-      overflow: hidden;
-      border: 1px solid var(--line);
+      margin: 18px 0;
+      background: var(--paper);
     }
 
-    th,
-    td {
+    .compare th,
+    .compare td {
       border: 1px solid var(--line);
-      padding: 10px;
+      padding: 12px;
       text-align: left;
       vertical-align: top;
     }
 
-    th {
-      background: #eef2f7;
-    }
-
-    .note,
-    .warning {
-      border: 1px solid var(--line);
-      border-left: 5px solid var(--accent);
-      background: var(--soft);
-      padding: 14px 16px;
-      border-radius: 6px;
-      margin: 16px 0;
-    }
-
-    .warning {
-      border-left-color: var(--accent-2);
-      background: var(--warn);
-    }
-
-    .diagram {
-      background: #f3f6fa;
-      border: 1px dashed #b6c0ce;
-      border-radius: 8px;
-      padding: 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      white-space: pre;
-      overflow-x: auto;
-      line-height: 1.45;
-      margin: 14px 0 18px;
-    }
-
-    .part-list {
-      display: grid;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .part {
-      display: grid;
-      gap: 6px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 14px;
-      background: #fbfcfe;
-    }
-
-    .part strong {
-      display: block;
-      line-height: 1.3;
-    }
-
-    .part a {
-      width: fit-content;
-      font-weight: 650;
+    .compare th {
+      background: #ede6da;
     }
 
     footer {
-      width: min(1100px, calc(100% - 32px));
-      margin: 0 auto 48px;
+      padding: 34px 0 54px;
       color: var(--muted);
-      font-size: 0.95rem;
     }
 
-    @media (max-width: 760px) {
-      header {
-        padding-top: 36px;
+    @media (max-width: 980px) {
+      .layout {
+        display: block;
       }
 
-      nav ul {
-        columns: 1;
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
       }
 
-      section {
-        padding: 20px;
+      nav ol {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hero {
+        padding: 40px 24px 32px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      nav ol {
+        grid-template-columns: 1fr;
+      }
+
+      .article {
+        width: min(100% - 28px, 860px);
+      }
+
+      .lesson {
+        padding: 18px;
+      }
+
+      .lesson-header {
+        display: grid;
+      }
+
+      .source-link {
+        width: fit-content;
       }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>Mini Isolation Lab</h1>
-      <p>A step-by-step tutorial for engineers who want to understand containers, microVMs, Linux syscalls, memory allocation, KVM, and Firecracker-style isolation without already being a kernel expert.</p>
-    </div>
-  </header>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <div class="crumb">systems course</div>
+        <h1>Mini Isolation Lab</h1>
+        <p>Containers and microVMs from Linux fundamentals to tiny working runtimes.</p>
+      </div>
 
-  <main>
-    <nav aria-label="Tutorial sections">
-      <strong>Sections</strong>
-      <ul>
-        <li><a href="#mental-model">Mental Model</a></li>
-        <li><a href="#course">Course Parts And Source</a></li>
-        <li><a href="#linux-basics">Linux Basics</a></li>
-        <li><a href="#syscalls">Syscalls</a></li>
-        <li><a href="#memory">Memory Allocation</a></li>
-        <li><a href="#containers">Containers</a></li>
-        <li><a href="#microvms">MicroVMs</a></li>
-        <li><a href="#security">Why MicroVMs Are More Isolated</a></li>
-        <li><a href="#run">Run The Demos</a></li>
-        <li><a href="#code-map">Code Map</a></li>
-      </ul>
-    </nav>
+      <div class="nav-label">Course Index</div>
+      <nav aria-label="Course parts">
+        <ol>
+          <li><a href="#part-01"><span class="part-number">01</span><span class="nav-title">Syscalls</span></a></li>
+          <li><a href="#part-02"><span class="part-number">02</span><span class="nav-title">Memory</span></a></li>
+          <li><a href="#part-03"><span class="part-number">03</span><span class="nav-title">Processes</span></a></li>
+          <li><a href="#part-04"><span class="part-number">04</span><span class="nav-title">Namespaces</span></a></li>
+          <li><a href="#part-05"><span class="part-number">05</span><span class="nav-title">Root Filesystem</span></a></li>
+          <li><a href="#part-06"><span class="part-number">06</span><span class="nav-title">Cgroups</span></a></li>
+          <li><a href="#part-07"><span class="part-number">07</span><span class="nav-title">Mini Container</span></a></li>
+          <li><a href="#part-08"><span class="part-number">08</span><span class="nav-title">KVM API</span></a></li>
+          <li><a href="#part-09"><span class="part-number">09</span><span class="nav-title">Mini Firecracker</span></a></li>
+          <li><a href="#run"><span class="part-number">RUN</span><span class="nav-title">Build And Try</span></a></li>
+        </ol>
+      </nav>
+    </aside>
 
-    <section id="mental-model">
-      <h2>1. The Mental Model</h2>
-      <p>Isolation is about deciding what a program can see and what it can touch. A normal Linux process shares the host kernel with every other process. Containers add walls around that process. MicroVMs go further by putting a small virtual machine between the workload and the host kernel.</p>
+    <main>
+      <header class="hero">
+        <div class="article">
+          <div class="kicker">Containerization and microVMs</div>
+          <h2>Learn isolation by building it in small parts.</h2>
+          <p>This is a guided course for engineers without a low-level background. You start with one syscall, then memory, processes, namespaces, cgroups, and finally a tiny Firecracker-shaped KVM virtual machine monitor.</p>
+          <div class="hero-grid" aria-label="Course summary">
+            <div class="stat"><strong>9 parts</strong><span>each with focused source</span></div>
+            <div class="stat"><strong>2 demos</strong><span>mini-container and mini-firecracker</span></div>
+            <div class="stat"><strong>Linux-only</strong><span>namespaces, cgroups, and KVM</span></div>
+          </div>
+        </div>
+      </header>
 
-      <div class="diagram">normal process:
+      <section id="map">
+        <div class="article">
+          <h2>Before The First Part</h2>
+          <p>The whole course is about one boundary: where a normal program stops and the kernel starts.</p>
+          <div class="diagram">normal process:
   app -> host Linux kernel -> hardware
 
 container:
@@ -275,270 +479,220 @@ container:
 
 microVM:
   app -> guest Linux kernel -> virtual hardware -> VMM/KVM -> host Linux kernel -> hardware</div>
-
-      <p>The most important difference is that a container shares the host kernel, while a microVM runs its own guest kernel.</p>
-    </section>
-
-    <section id="course">
-      <h2>2. Course Parts And Source</h2>
-      <p>The tutorial is organized like a course. Each part has source code under `src/part-*`, and this page is the main explanation. The links below point to the source in the GitHub repository when published with GitHub Pages.</p>
-
-      <div class="part-list">
-        <div class="part">
-          <strong>Part 01: Syscalls</strong>
-          <span>Call `write(2)` directly so you can see how user programs ask the kernel to do work.</span>
-          <a data-src="src/part-01-syscalls/syscall_write.c" href="../src/part-01-syscalls/syscall_write.c">View source</a>
+          <p>A container is a host process with isolated views. A microVM is a tiny VM with its own guest kernel. That is the security and architecture difference everything else builds on.</p>
         </div>
-        <div class="part">
-          <strong>Part 02: Memory</strong>
-          <span>Compare `malloc` with `mmap`, then connect that to guest memory in a microVM.</span>
-          <a data-src="src/part-02-memory/mmap_memory.c" href="../src/part-02-memory/mmap_memory.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 03: Processes</strong>
-          <span>Create a child process with Linux `clone` before adding namespace flags.</span>
-          <a data-src="src/part-03-processes/clone_process.c" href="../src/part-03-processes/clone_process.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 04: Namespaces</strong>
-          <span>Create a UTS namespace and give the child process a different hostname.</span>
-          <a data-src="src/part-04-namespaces/uts_namespace.c" href="../src/part-04-namespaces/uts_namespace.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 05: Root Filesystem</strong>
-          <span>Use `chroot` to change what the process sees as `/`.</span>
-          <a data-src="src/part-05-rootfs/chroot_exec.c" href="../src/part-05-rootfs/chroot_exec.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 06: Cgroups</strong>
-          <span>Write to cgroup v2 control files to limit memory and process count.</span>
-          <a data-src="src/part-06-cgroups/cgroup_limit.c" href="../src/part-06-cgroups/cgroup_limit.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 07: Mini Container</strong>
-          <span>Combine namespaces, rootfs, `/proc`, and cgroups into a small container runner.</span>
-          <a data-src="src/part-07-container/mini_container.c" href="../src/part-07-container/mini_container.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 08: KVM API</strong>
-          <span>Open `/dev/kvm` and ask the Linux kernel which KVM API version it supports.</span>
-          <a data-src="src/part-08-kvm/kvm_api_version.c" href="../src/part-08-kvm/kvm_api_version.c">View source</a>
-        </div>
-        <div class="part">
-          <strong>Part 09: Mini Firecracker</strong>
-          <span>Create a tiny KVM VMM loop that runs guest code and handles I/O exits.</span>
-          <a data-src="src/part-09-microvm/mini_firecracker.c" href="../src/part-09-microvm/mini_firecracker.c">View source</a>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="linux-basics">
-      <h2>3. Basic Linux Pieces</h2>
-      <h3>Process</h3>
-      <p>A process is a running program. It has a process ID, memory, open files, environment variables, credentials, and kernel-managed resources.</p>
-
-      <h3>Kernel</h3>
-      <p>The kernel is the privileged part of the operating system. User programs do not directly control disks, network cards, memory mappings, or process scheduling. They ask the kernel.</p>
-
-      <h3>Filesystem</h3>
-      <p>Linux presents files, devices, and kernel views as paths. For example, `/proc` is not a normal directory on disk. It is a kernel-provided view of processes and system information.</p>
-
-      <h3>Root Filesystem</h3>
-      <p>The root filesystem is what a process sees under `/`. A container can be given a different root filesystem, so `/bin/sh` inside the container can be different from `/bin/sh` on the host.</p>
-    </section>
-
-    <section id="syscalls">
-      <h2>4. What Is A Syscall?</h2>
-      <p>A syscall is how a normal program asks the kernel to do privileged work. When you call `open`, `read`, `write`, `fork`, `clone`, `mount`, or `mmap`, your program eventually crosses from user mode into kernel mode.</p>
-
-      <div class="diagram">printf("hello")
+      <section id="part-01">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 01</span>
+              <h3>Syscalls: talking to the kernel</h3>
+            </div>
+            <a class="source-link" data-src="src/part-01-syscalls/syscall_write.c" href="../src/part-01-syscalls/syscall_write.c">source</a>
+          </div>
+          <p>A syscall is how a normal program asks the Linux kernel to do privileged work. Printing text, opening files, creating processes, mapping memory, and mounting filesystems all go through syscalls.</p>
+          <pre><code class="language-c">printf("hello")
   -> C library
   -> write(1, "hello", 5)
-  -> syscall instruction
-  -> Linux kernel writes to terminal</div>
+  -> Linux kernel
+  -> terminal</code></pre>
+          <p>The source for this part skips `printf` and calls `SYS_write` directly. That makes the user-to-kernel boundary visible.</p>
+        </div>
+      </section>
 
-      <p>Containers are built from Linux syscalls. The container demo uses `clone` to create a process with new namespaces, `chroot` to change the visible root filesystem, `mount` to mount `/proc`, and cgroup files under `/sys/fs/cgroup` to apply limits.</p>
+      <section id="part-02">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 02</span>
+              <h3>Memory: malloc, mmap, and virtual addresses</h3>
+            </div>
+            <a class="source-link" data-src="src/part-02-memory/mmap_memory.c" href="../src/part-02-memory/mmap_memory.c">source</a>
+          </div>
+          <p>`malloc` asks the C allocator for memory. The allocator may ask the kernel for more pages using `mmap` or `brk`. A VMM also uses host memory, then tells KVM to expose that memory as guest physical RAM.</p>
+          <pre><code class="language-text">host VMM process
+  mmap(2 MiB)
+  -> host virtual memory
+  -> KVM maps it as guest physical memory</code></pre>
+          <p>This is why the microVM demo starts by allocating a memory region before it creates and runs a vCPU.</p>
+        </div>
+      </section>
 
-      <pre><code>int flags = CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS |
-            CLONE_NEWIPC | CLONE_NEWNET | SIGCHLD;
+      <section id="part-03">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 03</span>
+              <h3>Processes: clone without isolation</h3>
+            </div>
+            <a class="source-link" data-src="src/part-03-processes/clone_process.c" href="../src/part-03-processes/clone_process.c">source</a>
+          </div>
+          <p>Before containers, you need processes. Linux has `fork`, but container runtimes commonly use `clone` because it can create a child process and choose which kernel resources are shared or isolated.</p>
+          <pre><code class="language-c">clone(child_main, stack + STACK_SIZE, SIGCHLD, NULL)</code></pre>
+          <p>At this point there is no container yet. There is only a parent process and a child process.</p>
+        </div>
+      </section>
 
-pid_t child_pid = clone(child_main, stack + STACK_SIZE, flags, &config);</code></pre>
+      <section id="part-04">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 04</span>
+              <h3>Namespaces: a different view of the same host</h3>
+            </div>
+            <a class="source-link" data-src="src/part-04-namespaces/uts_namespace.c" href="../src/part-04-namespaces/uts_namespace.c">source</a>
+          </div>
+          <p>A namespace gives a process a different view of one system resource. The first namespace example uses `CLONE_NEWUTS`, which lets the child have a different hostname from the host.</p>
+          <pre><code class="language-c">clone(child_main, stack + STACK_SIZE, CLONE_NEWUTS | SIGCHLD, NULL)</code></pre>
+          <p>Containers combine several namespaces: UTS for hostname, PID for process IDs, mount for filesystems, network for network interfaces, and IPC for inter-process communication.</p>
+        </div>
+      </section>
 
-      <p>That one `clone` call asks Linux to create a child process with new isolated views of hostname, process IDs, mounts, IPC, and networking.</p>
-    </section>
+      <section id="part-05">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 05</span>
+              <h3>Root filesystem: what `/` means</h3>
+            </div>
+            <a class="source-link" data-src="src/part-05-rootfs/chroot_exec.c" href="../src/part-05-rootfs/chroot_exec.c">source</a>
+          </div>
+          <p>`chroot` changes what a process sees as `/`. This is not a complete security boundary by itself, but it is a useful learning step toward root filesystems in containers.</p>
+          <div class="diagram">host root:
+  /bin
+  /etc
+  /home
 
-    <section id="memory">
-      <h2>5. Memory Allocation Basics</h2>
-      <p>When a program asks for memory with `malloc`, it is asking the C runtime for memory. The C runtime may already have spare memory, or it may ask the kernel for more using syscalls such as `brk` or `mmap`.</p>
+container rootfs:
+  /bin/sh
+  /proc
+  /tmp</div>
+          <p>Real runtimes use stronger setup, often including `pivot_root`, bind mounts, read-only mounts, and careful capability dropping.</p>
+        </div>
+      </section>
 
-      <div class="diagram">malloc(1 MiB)
-  -> C allocator
-  -> maybe mmap()
-  -> kernel maps virtual memory pages
-  -> process receives an address it can use</div>
+      <section id="part-06">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 06</span>
+              <h3>Cgroups: limits, not views</h3>
+            </div>
+            <a class="source-link" data-src="src/part-06-cgroups/cgroup_limit.c" href="../src/part-06-cgroups/cgroup_limit.c">source</a>
+          </div>
+          <p>Namespaces change what a process can see. Cgroups limit what a process can use. The example writes to cgroup v2 files like `pids.max`, `memory.max`, and `cgroup.procs`.</p>
+          <pre><code class="language-text">/sys/fs/cgroup/demo/
+  pids.max       -> maximum number of processes
+  memory.max     -> maximum memory
+  cgroup.procs   -> PIDs that belong to this cgroup</code></pre>
+          <p>This is the resource-control half of containers.</p>
+        </div>
+      </section>
 
-      <p>Each process sees virtual addresses. The CPU and kernel translate those virtual addresses to physical memory. This is why two different processes can both have memory at address `0x1000` without touching the same real RAM.</p>
+      <section id="part-07">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 07</span>
+              <h3>Mini container: combine the pieces</h3>
+            </div>
+            <a class="source-link" data-src="src/part-07-container/mini_container.c" href="../src/part-07-container/mini_container.c">source</a>
+          </div>
+          <p>The mini-container combines the earlier ideas: `clone` with namespace flags, a new root filesystem, a private mount namespace, `/proc`, and best-effort cgroup limits.</p>
+          <pre><code class="language-c">CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS |
+CLONE_NEWIPC | CLONE_NEWNET</code></pre>
+          <div class="callout warning"><strong>Learning tool, not hardened sandbox.</strong> Real runtimes also need user namespaces, seccomp, capability dropping, AppArmor or SELinux, image handling, and robust networking.</div>
+        </div>
+      </section>
 
-      <p>The microVM demo uses `mmap` directly to allocate guest RAM inside the host VMM process:</p>
+      <section id="part-08">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 08</span>
+              <h3>KVM API: asking Linux to create VMs</h3>
+            </div>
+            <a class="source-link" data-src="src/part-08-kvm/kvm_api_version.c" href="../src/part-08-kvm/kvm_api_version.c">source</a>
+          </div>
+          <p>KVM is the Linux kernel virtualization interface. A VMM opens `/dev/kvm`, sends ioctls, creates a VM, creates vCPUs, maps guest memory, and then repeatedly calls `KVM_RUN`.</p>
+          <pre><code class="language-c">open("/dev/kvm")
+ioctl(KVM_CREATE_VM)
+ioctl(KVM_CREATE_VCPU)
+ioctl(KVM_RUN)</code></pre>
+          <p>This part only checks the KVM API version. It is the smallest safe first touch before creating a full VM.</p>
+        </div>
+      </section>
 
-      <pre><code>uint8_t *guest_mem = mmap(NULL,
-                          GUEST_MEM_SIZE,
-                          PROT_READ | PROT_WRITE,
-                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
-                          -1,
-                          0);</code></pre>
+      <section id="part-09">
+        <div class="article lesson">
+          <div class="lesson-header">
+            <div class="lesson-title">
+              <span class="part-number">Part 09</span>
+              <h3>Mini Firecracker: the VMM event loop</h3>
+            </div>
+            <a class="source-link" data-src="src/part-09-microvm/mini_firecracker.c" href="../src/part-09-microvm/mini_firecracker.c">source</a>
+          </div>
+          <p>Firecracker is a production VMM. This course ends with a tiny VMM that shows the same core shape: create a VM, map guest memory, create a vCPU, run guest code, handle VM exits, and resume.</p>
+          <div class="diagram">while guest is alive:
+  KVM_RUN
+  inspect exit reason
+  emulate requested device or event
+  resume guest</div>
+          <p>The guest writes characters to a fake I/O port. KVM exits to the host VMM, the VMM prints the character, and then the guest continues until it halts.</p>
+        </div>
+      </section>
 
-      <p>Then it tells KVM: this block of host memory should appear as physical RAM to the guest VM.</p>
-    </section>
+      <section id="security">
+        <div class="article">
+          <h2>Container vs MicroVM Security</h2>
+          <table class="compare">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Container</th>
+                <th>MicroVM</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Does workload share host kernel?</td>
+                <td>Yes.</td>
+                <td>No. It has a guest kernel.</td>
+              </tr>
+              <tr>
+                <td>Where do app syscalls go?</td>
+                <td>Directly to the host kernel.</td>
+                <td>To the guest kernel first.</td>
+              </tr>
+              <tr>
+                <td>What does the host expose?</td>
+                <td>Large syscall surface.</td>
+                <td>Virtual CPU, memory, and devices.</td>
+              </tr>
+              <tr>
+                <td>Best fit</td>
+                <td>Trusted services and developer workflow.</td>
+                <td>Untrusted code and multi-tenant workloads.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-    <section id="containers">
-      <h2>6. How Containers Work</h2>
-      <p>A container is not a tiny VM. It is a normal Linux process with isolated views and limits.</p>
+      <section id="run">
+        <div class="article">
+          <h2>Build And Try It</h2>
+          <div class="callout"><strong>Linux required.</strong> macOS does not provide Linux namespaces, cgroups, or KVM. Use a Linux VM, Linux laptop, or cloud instance.</div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th>Linux mechanism</th>
-            <th>What it changes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Hostname isolation</td>
-            <td>UTS namespace</td>
-            <td>The process can have a different hostname.</td>
-          </tr>
-          <tr>
-            <td>PID isolation</td>
-            <td>PID namespace</td>
-            <td>The process can see itself as PID 1.</td>
-          </tr>
-          <tr>
-            <td>Filesystem view</td>
-            <td>Mount namespace and rootfs</td>
-            <td>The process sees a different `/` and mount table.</td>
-          </tr>
-          <tr>
-            <td>Network isolation</td>
-            <td>Network namespace</td>
-            <td>The process gets a separate network stack.</td>
-          </tr>
-          <tr>
-            <td>Resource limits</td>
-            <td>cgroups</td>
-            <td>The process can be limited by memory, CPU, and process count.</td>
-          </tr>
-        </tbody>
-      </table>
+          <h3>Build the course binaries</h3>
+          <pre><code class="language-bash">sudo apt-get install build-essential busybox-static
+make
+make parts</code></pre>
 
-      <div class="diagram">host Linux kernel
-  process A
-  process B
-  mini-container process
-    isolated hostname
-    isolated PID view
-    isolated mount view
-    isolated network view
-    cgroup limits</div>
-
-      <p>The container demo is intentionally small. It creates a child process with namespace flags, changes the root filesystem, mounts `/proc`, and runs your command.</p>
-
-      <div class="warning">
-        <strong>Important:</strong> this demo teaches mechanics. It is not a hardened sandbox. Real container runtimes also drop capabilities, use seccomp, set up user namespaces, configure AppArmor or SELinux, manage images, and handle networking carefully.
-      </div>
-    </section>
-
-    <section id="microvms">
-      <h2>7. How MicroVMs Work</h2>
-      <p>A microVM is a small virtual machine optimized for fast startup, low overhead, and strong isolation. Firecracker is a production microVM monitor used for serverless and container workloads.</p>
-
-      <p>From the host, a Firecracker microVM is controlled by a host process. That process opens `/dev/kvm`, creates a VM, gives it memory, creates virtual CPUs, attaches virtual devices, and starts the guest.</p>
-
-      <div class="diagram">host Linux
-  firecracker process
-    opens /dev/kvm
-    creates VM
-    maps guest RAM
-    creates vCPU
-    handles virtual disk/network/console
-      guest Linux kernel
-        guest app</div>
-
-      <p>The guest does not directly own your physical disk or network card. It sees virtual hardware. The host kernel still controls the real hardware.</p>
-
-      <p>The microVM demo is the smallest useful KVM loop:</p>
-
-      <pre><code>open("/dev/kvm")
-KVM_CREATE_VM
-mmap guest memory
-KVM_SET_USER_MEMORY_REGION
-KVM_CREATE_VCPU
-KVM_RUN
-handle exits</code></pre>
-
-      <p>When guest code writes to the fake debug port `0xe9`, KVM pauses the guest and returns to the VMM process with `KVM_EXIT_IO`. The VMM prints the byte, then resumes the guest.</p>
-
-      <div class="diagram">guest writes byte to port 0xe9
-  -> CPU exits to KVM
-  -> KVM returns to mini-firecracker
-  -> mini-firecracker prints byte
-  -> mini-firecracker calls KVM_RUN again</div>
-    </section>
-
-    <section id="security">
-      <h2>8. Why MicroVMs Are More Isolated Than Containers</h2>
-      <p>The practical security difference is the kernel boundary.</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Question</th>
-            <th>Container</th>
-            <th>MicroVM</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Does workload share the host kernel?</td>
-            <td>Yes.</td>
-            <td>No. It has a guest kernel.</td>
-          </tr>
-          <tr>
-            <td>Where do app syscalls go?</td>
-            <td>Directly to the host kernel.</td>
-            <td>To the guest kernel first.</td>
-          </tr>
-          <tr>
-            <td>What does host expose?</td>
-            <td>Large syscall surface.</td>
-            <td>Virtual CPU, memory, and virtual devices.</td>
-          </tr>
-          <tr>
-            <td>Best for</td>
-            <td>Trusted services, developer workflow, high density.</td>
-            <td>Untrusted code, multi-tenant workloads, serverless.</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <p>A container escape often means abusing a host kernel feature or bug. A microVM escape usually requires crossing the guest kernel, virtual hardware, KVM, or VMM boundary. That extra boundary is why microVMs are attractive for running code from many customers on the same physical machine.</p>
-
-      <p>Firecracker makes this stronger by keeping the device model small. Fewer virtual devices means less code exposed to the guest.</p>
-    </section>
-
-    <section id="run">
-      <h2>9. Run The Demos</h2>
-      <div class="note">
-        These demos require Linux. macOS does not provide Linux namespaces, cgroups, or KVM. Use a Linux VM, cloud instance, or Linux machine.
-      </div>
-
-      <h3>Build</h3>
-      <pre><code>sudo apt-get install build-essential busybox-static
-make</code></pre>
-
-      <h3>Container Demo</h3>
-      <pre><code>mkdir -p rootfs/bin
+          <h3>Run the mini-container</h3>
+          <pre><code class="language-bash">mkdir -p rootfs/bin
 cp /bin/busybox rootfs/bin/
 ln -s busybox rootfs/bin/sh
 ln -s busybox rootfs/bin/ps
@@ -548,52 +702,25 @@ ln -s busybox rootfs/bin/ip
 
 sudo ./mini-container ./rootfs /bin/sh</code></pre>
 
-      <p>Inside the container:</p>
-      <pre><code>hostname
-echo $$
-ps
-mount</code></pre>
-
-      <h3>MicroVM Demo</h3>
-      <pre><code>ls -l /dev/kvm
+          <h3>Run the mini-firecracker</h3>
+          <pre><code class="language-bash">ls -l /dev/kvm
 ./mini-firecracker</code></pre>
 
-      <p>Expected output:</p>
-      <pre><code>host VMM: starting vCPU
+          <p>Expected output:</p>
+          <pre><code class="language-text">host VMM: starting vCPU
 hello from a tiny microVM
 host VMM: guest halted</code></pre>
-    </section>
+        </div>
+      </section>
 
-    <section id="code-map">
-      <h2>10. Code Map</h2>
-      <h3>Container code</h3>
-      <ul>
-        <li>`src/part-07-container/mini_container.c`: creates namespaces with `clone`.</li>
-        <li>`try_apply_cgroup_limits`: writes to cgroup v2 control files.</li>
-        <li>`child_main`: sets hostname, changes root, mounts `/proc`, executes command.</li>
-      </ul>
+      <footer>
+        <div class="article">
+          <p>Mini Isolation Lab is educational code. It intentionally leaves out many production safety features. Do not treat either demo as a secure sandbox.</p>
+        </div>
+      </footer>
+    </main>
+  </div>
 
-      <h3>MicroVM code</h3>
-      <ul>
-        <li>`src/part-09-microvm/mini_firecracker.c`: opens KVM and creates a small VM.</li>
-        <li>`guest_code`: tiny x86 machine code that writes characters to a fake device.</li>
-        <li>`handle_io_exit`: emulates the fake device when KVM exits to userspace.</li>
-      </ul>
-
-      <h3>Suggested next steps</h3>
-      <ol>
-        <li>Add a command-line flag to choose cgroup memory size.</li>
-        <li>Add a loopback network setup to the container demo.</li>
-        <li>Load microVM guest bytes from a file instead of embedding them.</li>
-        <li>Add a tiny Unix socket API that starts and stops the microVM.</li>
-        <li>Study how Firecracker adds virtio block and virtio net devices.</li>
-      </ol>
-    </section>
-  </main>
-
-  <footer>
-    <p>Mini Isolation Lab is educational code. It intentionally leaves out many production safety features. Do not treat either demo as a secure sandbox.</p>
-  </footer>
   <script>
     (function () {
       var host = window.location.hostname;
@@ -613,5 +740,8 @@ host VMM: guest halted</code></pre>
       });
     }());
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
 </body>
 </html>

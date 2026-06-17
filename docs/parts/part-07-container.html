@@ -2,9 +2,210 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 07: Mini Container - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
 <body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
-<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a class="active" href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
+<li><a class="active" href="part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
 </ol></nav></aside><main><article class="article">
-<div class="part-label">Part 07</div><h2>Mini Container: Combining The Linux Primitives</h2><a class="source-link" data-src="src/part-07-container/mini_container.c" href="../../src/part-07-container/mini_container.c">view source</a>
+<div class="part-label">Part 07</div><h2>Mini Container: Combining The Linux Primitives</h2><details class="source-panel"><summary>Show source: src/part-07-container/mini_container.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "mini_container.c requires Linux namespaces and cgroups; build it on Linux."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sched.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/mount.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;sys/wait.h&gt;
+#include &lt;unistd.h&gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+struct child_config {
+    char **argv;
+    char *rootfs;
+    int sync_fd;
+};
+
+static void die(const char *msg) {
+    perror(msg);
+    exit(EXIT_FAILURE);
+}
+
+static void warn_errno(const char *msg) {
+    fprintf(stderr, "warning: %s: %s\n", msg, strerror(errno));
+}
+
+static int write_file(const char *path, const char *value) {
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd &lt; 0) {
+        return -1;
+    }
+
+    ssize_t len = (ssize_t)strlen(value);
+    if (write(fd, value, len) != len) {
+        int saved = errno;
+        close(fd);
+        errno = saved;
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+static void try_apply_cgroup_limits(pid_t child_pid) {
+    char dir[256];
+    char path[512];
+    char value[64];
+
+    snprintf(dir, sizeof(dir), "/sys/fs/cgroup/mini-container-%d", child_pid);
+    if (mkdir(dir, 0755) &lt; 0 &amp;&amp; errno != EEXIST) {
+        warn_errno("could not create cgroup; run as root on a cgroup v2 Linux host");
+        return;
+    }
+
+    snprintf(path, sizeof(path), "%s/pids.max", dir);
+    if (write_file(path, "64\n") &lt; 0) {
+        warn_errno("could not set pids.max");
+    }
+
+    snprintf(path, sizeof(path), "%s/memory.max", dir);
+    if (write_file(path, "134217728\n") &lt; 0) {
+        warn_errno("could not set memory.max");
+    }
+
+    snprintf(path, sizeof(path), "%s/cgroup.procs", dir);
+    snprintf(value, sizeof(value), "%d\n", child_pid);
+    if (write_file(path, value) &lt; 0) {
+        warn_errno("could not move child into cgroup");
+    }
+}
+
+static void wait_for_parent(int fd) {
+    char byte;
+    ssize_t n = read(fd, &amp;byte, 1);
+    if (n &lt; 0) {
+        die("read sync pipe");
+    }
+    if (n == 0) {
+        fprintf(stderr, "parent exited before container started\n");
+        exit(EXIT_FAILURE);
+    }
+    close(fd);
+}
+
+static int child_main(void *arg) {
+    struct child_config *config = arg;
+
+    wait_for_parent(config-&gt;sync_fd);
+
+    if (sethostname("mini-container", strlen("mini-container")) &lt; 0) {
+        die("sethostname");
+    }
+
+    /*
+     * Stop mount changes inside this process from propagating back to the host.
+     * This matters before mounting /proc inside the new root filesystem.
+     */
+    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) &lt; 0) {
+        die("make mounts private");
+    }
+
+    if (chroot(config-&gt;rootfs) &lt; 0) {
+        die("chroot");
+    }
+    if (chdir("/") &lt; 0) {
+        die("chdir /");
+    }
+
+    if (mkdir("/proc", 0555) &lt; 0 &amp;&amp; errno != EEXIST) {
+        die("mkdir /proc");
+    }
+    if (mount("proc", "/proc", "proc", 0, "") &lt; 0) {
+        die("mount /proc");
+    }
+
+    printf("inside container: hostname=mini-container, pid=%d\n", getpid());
+    execvp(config-&gt;argv[0], config-&gt;argv);
+    die("execvp");
+}
+
+static void usage(const char *program) {
+    fprintf(stderr, "usage: sudo %s ROOTFS COMMAND [ARG...]\n", program);
+    fprintf(stderr, "example: sudo %s ./rootfs /bin/sh\n", program);
+}
+
+int main(int argc, char **argv) {
+    if (argc &lt; 3) {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    char *stack = malloc(STACK_SIZE);
+    if (!stack) {
+        die("malloc stack");
+    }
+
+    int sync_pipe[2];
+    if (pipe(sync_pipe) &lt; 0) {
+        die("pipe");
+    }
+
+    struct child_config config = {
+        .rootfs = argv[1],
+        .argv = &amp;argv[2],
+        .sync_fd = sync_pipe[0],
+    };
+
+    int flags = CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC |
+                CLONE_NEWNET | SIGCHLD;
+    pid_t child_pid = clone(child_main, stack + STACK_SIZE, flags, &amp;config);
+    if (child_pid &lt; 0) {
+        die("clone");
+    }
+
+    close(sync_pipe[0]);
+    try_apply_cgroup_limits(child_pid);
+
+    if (write(sync_pipe[1], "1", 1) != 1) {
+        die("write sync pipe");
+    }
+    close(sync_pipe[1]);
+
+    int status;
+    if (waitpid(child_pid, &amp;status, 0) &lt; 0) {
+        die("waitpid");
+    }
+
+    char cgroup_dir[256];
+    snprintf(cgroup_dir, sizeof(cgroup_dir), "/sys/fs/cgroup/mini-container-%d", child_pid);
+    if (rmdir(cgroup_dir) &lt; 0 &amp;&amp; errno != ENOENT) {
+        warn_errno("could not remove cgroup directory");
+    }
+
+    free(stack);
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+    if (WIFSIGNALED(status)) {
+        return 128 + WTERMSIG(status);
+    }
+    return EXIT_FAILURE;
+}
+</code></pre></details>
 <p>This part combines the previous lessons into a small container runner. It is not Docker, containerd, or runc, but the skeleton is recognizable: create an isolated child, prepare its filesystem view, mount `/proc`, apply limits, and execute the requested command.</p>
 <h3>The Namespace Set</h3><pre><code class="language-c">CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS |
 CLONE_NEWIPC | CLONE_NEWNET | SIGCHLD</code></pre>

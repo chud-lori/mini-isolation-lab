@@ -13,21 +13,59 @@
       <div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div>
       <div class="nav-label">Course Index</div>
       <nav><ol>
-        <li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li>
-        <li><a class="active" href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li>
-        <li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li>
-        <li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li>
-        <li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li>
-        <li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li>
-        <li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li>
-        <li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li>
-        <li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
-      </ol></nav>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
+<li><a class="active" href="part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
+</ol></nav>
     </aside>
     <main><article class="article">
       <div class="part-label">Part 02</div>
       <h2>Memory: malloc, mmap, And Virtual Addresses</h2>
-      <a class="source-link" data-src="src/part-02-memory/mmap_memory.c" href="../../src/part-02-memory/mmap_memory.c">view source</a>
+      <details class="source-panel"><summary>Show source: src/part-02-memory/mmap_memory.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/mman.h&gt;
+#include &lt;unistd.h&gt;
+
+int main(void) {
+    char *heap = malloc(64);
+    if (!heap) {
+        perror("malloc");
+        return 1;
+    }
+    strcpy(heap, "malloc: memory managed by the C allocator");
+
+    size_t page_size = (size_t)sysconf(_SC_PAGESIZE);
+    char *mapped = mmap(NULL,
+                        page_size,
+                        PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS,
+                        -1,
+                        0);
+    if (mapped == MAP_FAILED) {
+        perror("mmap");
+        free(heap);
+        return 1;
+    }
+    strcpy(mapped, "mmap: memory requested directly from the kernel");
+
+    printf("%s\n", heap);
+    printf("%s\n", mapped);
+    printf("page size: %zu bytes\n", page_size);
+
+    munmap(mapped, page_size);
+    free(heap);
+    return 0;
+}
+</code></pre></details>
       <p>Every process sees virtual memory. The addresses in your program are not raw physical RAM addresses. The CPU and kernel cooperate through page tables to translate process-local virtual addresses into real memory pages.</p>
       <p>This default memory isolation is one of the oldest and most important isolation layers. Process A cannot normally read Process B's memory because their virtual address spaces map to different pages.</p>
       <h3>malloc Is Not The Kernel API</h3>

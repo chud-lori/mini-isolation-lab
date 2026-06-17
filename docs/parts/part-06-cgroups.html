@@ -2,9 +2,81 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 06: Cgroups - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
 <body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
-<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a class="active" href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
+<li><a class="active" href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
 </ol></nav></aside><main><article class="article">
-<div class="part-label">Part 06</div><h2>Cgroups: Limits, Not Views</h2><a class="source-link" data-src="src/part-06-cgroups/cgroup_limit.c" href="../../src/part-06-cgroups/cgroup_limit.c">view source</a>
+<div class="part-label">Part 06</div><h2>Cgroups: Limits, Not Views</h2><details class="source-panel"><summary>Show source: src/part-06-cgroups/cgroup_limit.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "cgroup_limit.c is intended for Linux cgroup v2."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;unistd.h&gt;
+
+static int write_file(const char *path, const char *value) {
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd &lt; 0) {
+        return -1;
+    }
+
+    ssize_t len = (ssize_t)strlen(value);
+    if (write(fd, value, len) != len) {
+        int saved = errno;
+        close(fd);
+        errno = saved;
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+int main(void) {
+    const char *dir = "/sys/fs/cgroup/part-06-cgroup-demo";
+    char path[256];
+    char pid[64];
+
+    if (mkdir(dir, 0755) &lt; 0 &amp;&amp; errno != EEXIST) {
+        perror("mkdir cgroup");
+        return 1;
+    }
+
+    snprintf(path, sizeof(path), "%s/pids.max", dir);
+    if (write_file(path, "8\n") &lt; 0) {
+        perror("write pids.max");
+        return 1;
+    }
+
+    snprintf(path, sizeof(path), "%s/memory.max", dir);
+    if (write_file(path, "67108864\n") &lt; 0) {
+        perror("write memory.max");
+        return 1;
+    }
+
+    snprintf(path, sizeof(path), "%s/cgroup.procs", dir);
+    snprintf(pid, sizeof(pid), "%d\n", getpid());
+    if (write_file(path, pid) &lt; 0) {
+        perror("write cgroup.procs");
+        return 1;
+    }
+
+    printf("this process is now limited by %s\n", dir);
+    printf("pids.max=8 memory.max=64MiB\n");
+    return 0;
+}
+</code></pre></details>
 <p>Namespaces answer: what can this process see? Cgroups answer: how much can this process use? Practical container isolation needs both. A process can have a private hostname and filesystem view, but without resource limits it can still consume memory, fork aggressively, or compete for CPU.</p>
 <h3>cgroup v2 Is A Filesystem Interface</h3><p>On cgroup v2 systems, kernel controls are exposed under `/sys/fs/cgroup`. Creating a directory creates a cgroup. Writing values to files changes limits. Writing a PID into `cgroup.procs` moves a process into the group.</p>
 <pre><code class="language-text">/sys/fs/cgroup/part-06-cgroup-demo/

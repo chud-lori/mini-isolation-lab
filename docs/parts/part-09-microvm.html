@@ -2,9 +2,225 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 09: Mini Firecracker - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
 <body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol>
-<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li><li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li><li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li><li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li><li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li><li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li><li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li><li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li><li><a class="active" href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
+<li><a class="active" href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
 </ol></nav></aside><main><article class="article">
-<div class="part-label">Part 09</div><h2>Mini Firecracker: A Tiny VMM Event Loop</h2><a class="source-link" data-src="src/part-09-microvm/mini_firecracker.c" href="../../src/part-09-microvm/mini_firecracker.c">view source</a>
+<div class="part-label">Part 09</div><h2>Mini Firecracker: A Tiny VMM Event Loop</h2><details class="source-panel"><summary>Show source: src/part-09-microvm/mini_firecracker.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "mini_firecracker.c requires Linux KVM; build and run it on Linux."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;linux/kvm.h&gt;
+#include &lt;stdint.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/ioctl.h&gt;
+#include &lt;sys/mman.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
+
+#define GUEST_MEM_SIZE (2 * 1024 * 1024)
+#define GUEST_ENTRY 0x1000
+#define DEBUG_PORT 0xE9
+
+static void die(const char *msg) {
+    perror(msg);
+    exit(EXIT_FAILURE);
+}
+
+static int kvm_ioctl(int fd, unsigned long request, void *arg) {
+    int ret = ioctl(fd, request, arg);
+    if (ret &lt; 0) {
+        die("ioctl");
+    }
+    return ret;
+}
+
+/*
+ * Tiny 16-bit x86 guest program:
+ *
+ *   for each byte in message:
+ *       al = byte
+ *       out 0xe9, al
+ *   hlt
+ *
+ * Port 0xe9 is a common debug-console convention. Real Firecracker uses virtio
+ * devices instead, but the VMM pattern is the same: guest performs I/O, KVM
+ * exits to userspace, userspace emulates a device, then resumes the vCPU.
+ */
+static const uint8_t guest_code[] = {
+    0xbe, 0x0e, 0x10,       /* mov si, 0x100e */
+    0xac,                   /* lodsb */
+    0x84, 0xc0,             /* test al, al */
+    0x74, 0x04,             /* jz done */
+    0xe6, DEBUG_PORT,       /* out 0xe9, al */
+    0xeb, 0xf7,             /* jmp loop */
+    0xf4,                   /* done: hlt */
+    0x00,                   /* padding */
+    'h', 'e', 'l', 'l', 'o', ' ',
+    'f', 'r', 'o', 'm', ' ',
+    'a', ' ', 't', 'i', 'n', 'y', ' ',
+    'm', 'i', 'c', 'r', 'o', 'V', 'M', '\n',
+    0x00,
+};
+
+static void setup_real_mode(int vcpu_fd) {
+    struct kvm_sregs sregs;
+    memset(&amp;sregs, 0, sizeof(sregs));
+    kvm_ioctl(vcpu_fd, KVM_GET_SREGS, &amp;sregs);
+
+    sregs.cs.base = 0;
+    sregs.cs.selector = 0;
+    sregs.ds.base = 0;
+    sregs.ds.selector = 0;
+    sregs.es.base = 0;
+    sregs.es.selector = 0;
+    sregs.ss.base = 0;
+    sregs.ss.selector = 0;
+    kvm_ioctl(vcpu_fd, KVM_SET_SREGS, &amp;sregs);
+
+    struct kvm_regs regs;
+    memset(&amp;regs, 0, sizeof(regs));
+    regs.rflags = 0x2;
+    regs.rip = GUEST_ENTRY;
+    regs.rsp = 0x200000;
+    kvm_ioctl(vcpu_fd, KVM_SET_REGS, &amp;regs);
+}
+
+static void handle_io_exit(struct kvm_run *run) {
+    if (run-&gt;io.direction != KVM_EXIT_IO_OUT ||
+        run-&gt;io.size != 1 ||
+        run-&gt;io.port != DEBUG_PORT) {
+        fprintf(stderr,
+                "\nunhandled I/O exit: direction=%u size=%u port=0x%x\n",
+                run-&gt;io.direction,
+                run-&gt;io.size,
+                run-&gt;io.port);
+        exit(EXIT_FAILURE);
+    }
+
+    uint8_t *data = (uint8_t *)run + run-&gt;io.data_offset;
+    for (uint32_t i = 0; i &lt; run-&gt;io.count; i++) {
+        putchar(data[i]);
+    }
+    fflush(stdout);
+}
+
+int main(void) {
+    int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+    if (kvm_fd &lt; 0) {
+        die("open /dev/kvm");
+    }
+
+    int api_version = ioctl(kvm_fd, KVM_GET_API_VERSION, 0);
+    if (api_version != KVM_API_VERSION) {
+        fprintf(stderr, "unsupported KVM API version: got %d expected %d\n",
+                api_version,
+                KVM_API_VERSION);
+        return EXIT_FAILURE;
+    }
+
+    int vm_fd = kvm_ioctl(kvm_fd, KVM_CREATE_VM, NULL);
+
+    uint8_t *guest_mem = mmap(NULL,
+                              GUEST_MEM_SIZE,
+                              PROT_READ | PROT_WRITE,
+                              MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                              -1,
+                              0);
+    if (guest_mem == MAP_FAILED) {
+        die("mmap guest memory");
+    }
+    memcpy(guest_mem + GUEST_ENTRY, guest_code, sizeof(guest_code));
+
+    struct kvm_userspace_memory_region region;
+    memset(&amp;region, 0, sizeof(region));
+    region.slot = 0;
+    region.guest_phys_addr = 0;
+    region.memory_size = GUEST_MEM_SIZE;
+    region.userspace_addr = (uint64_t)guest_mem;
+    kvm_ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &amp;region);
+
+    int vcpu_fd = kvm_ioctl(vm_fd, KVM_CREATE_VCPU, (void *)0);
+
+    int run_mmap_size = ioctl(kvm_fd, KVM_GET_VCPU_MMAP_SIZE, 0);
+    if (run_mmap_size &lt; (int)sizeof(struct kvm_run)) {
+        fprintf(stderr, "KVM_GET_VCPU_MMAP_SIZE returned too small a size\n");
+        return EXIT_FAILURE;
+    }
+
+    struct kvm_run *run = mmap(NULL,
+                               (size_t)run_mmap_size,
+                               PROT_READ | PROT_WRITE,
+                               MAP_SHARED,
+                               vcpu_fd,
+                               0);
+    if (run == MAP_FAILED) {
+        die("mmap kvm_run");
+    }
+
+    setup_real_mode(vcpu_fd);
+
+    printf("host VMM: starting vCPU\n");
+    for (;;) {
+        if (ioctl(vcpu_fd, KVM_RUN, 0) &lt; 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            die("KVM_RUN");
+        }
+
+        switch (run-&gt;exit_reason) {
+        case KVM_EXIT_IO:
+            handle_io_exit(run);
+            break;
+        case KVM_EXIT_HLT:
+            printf("host VMM: guest halted\n");
+            goto done;
+        case KVM_EXIT_FAIL_ENTRY:
+            fprintf(stderr,
+                    "KVM_EXIT_FAIL_ENTRY hardware_entry_failure_reason=0x%llx\n",
+                    (unsigned long long)run-&gt;fail_entry.hardware_entry_failure_reason);
+            goto fail;
+        case KVM_EXIT_INTERNAL_ERROR:
+            fprintf(stderr, "KVM_EXIT_INTERNAL_ERROR suberror=%u\n",
+                    run-&gt;internal.suberror);
+            goto fail;
+        default:
+            fprintf(stderr, "unhandled KVM exit reason: %u\n", run-&gt;exit_reason);
+            goto fail;
+        }
+    }
+
+done:
+    munmap(run, (size_t)run_mmap_size);
+    munmap(guest_mem, GUEST_MEM_SIZE);
+    close(vcpu_fd);
+    close(vm_fd);
+    close(kvm_fd);
+    return EXIT_SUCCESS;
+
+fail:
+    munmap(run, (size_t)run_mmap_size);
+    munmap(guest_mem, GUEST_MEM_SIZE);
+    close(vcpu_fd);
+    close(vm_fd);
+    close(kvm_fd);
+    return EXIT_FAILURE;
+}
+</code></pre></details>
 <p>Firecracker is a production virtual machine monitor for microVMs. This lesson does not recreate Firecracker. Instead, it builds the smallest useful VMM shape: create a VM, allocate guest memory, create a vCPU, run guest code, handle exits, and resume.</p>
 <h3>The Core Loop</h3><pre><code class="language-text">while guest is alive:
   KVM_RUN

@@ -15,19 +15,17 @@
         <p>Containers and microVMs from Linux fundamentals to tiny working runtimes.</p>
       </div>
       <div class="nav-label">Course Index</div>
-      <nav aria-label="Course parts">
-        <ol>
-          <li><a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a></li>
-          <li><a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory</span></a></li>
-          <li><a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes</span></a></li>
-          <li><a href="parts/part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a></li>
-          <li><a href="parts/part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a></li>
-          <li><a href="parts/part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a></li>
-          <li><a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container</span></a></li>
-          <li><a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a></li>
-          <li><a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a></li>
-        </ol>
-      </nav>
+      <nav aria-label="Course parts"><ol>
+<li><a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls<span class="nav-sub">Kernel boundary</span></span></a></li>
+<li><a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory<span class="nav-sub">malloc, mmap, pages</span></span></a></li>
+<li><a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes<span class="nav-sub">clone and waitpid</span></span></a></li>
+<li><a href="parts/part-04-namespaces.html"><span class="num">04</span><span>Namespaces<span class="nav-sub">isolated views</span></span></a></li>
+<li><a href="parts/part-05-rootfs.html"><span class="num">05</span><span>Rootfs<span class="nav-sub">chroot and exec</span></span></a></li>
+<li><a href="parts/part-06-cgroups.html"><span class="num">06</span><span>Cgroups<span class="nav-sub">resource limits</span></span></a></li>
+<li><a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container<span class="nav-sub">combine primitives</span></span></a></li>
+<li><a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API<span class="nav-sub">/dev/kvm ioctl</span></span></a></li>
+<li><a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker<span class="nav-sub">VMM event loop</span></span></a></li>
+</ol></nav>
     </aside>
 
     <main>
@@ -45,15 +43,15 @@
         <p>The container side teaches how Linux isolates host processes with namespaces, root filesystems, and cgroups. The microVM side teaches how a host process uses KVM to run guest code behind a stronger VM boundary.</p>
 
         <div class="lesson-list">
-          <a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls: Talking To The Kernel</span><span>start</span></a>
-          <a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory: malloc, mmap, And Virtual Addresses</span><span>read</span></a>
-          <a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes: clone Before Containers</span><span>read</span></a>
-          <a href="parts/part-04-namespaces.html"><span class="num">04</span><span>Namespaces: Different Views Of The Same Kernel</span><span>read</span></a>
-          <a href="parts/part-05-rootfs.html"><span class="num">05</span><span>Root Filesystem: What `/` Means</span><span>read</span></a>
-          <a href="parts/part-06-cgroups.html"><span class="num">06</span><span>Cgroups: Limits, Not Views</span><span>read</span></a>
-          <a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container: Combining The Linux Primitives</span><span>build</span></a>
-          <a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API: Asking Linux To Create VMs</span><span>read</span></a>
-          <a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker: A Tiny VMM Event Loop</span><span>build</span></a>
+<a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls: Kernel boundary</span><span>start</span></a>
+<a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory: malloc, mmap, pages</span><span>read</span></a>
+<a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes: clone and waitpid</span><span>read</span></a>
+<a href="parts/part-04-namespaces.html"><span class="num">04</span><span>Namespaces: isolated views</span><span>read</span></a>
+<a href="parts/part-05-rootfs.html"><span class="num">05</span><span>Rootfs: chroot and exec</span><span>read</span></a>
+<a href="parts/part-06-cgroups.html"><span class="num">06</span><span>Cgroups: resource limits</span><span>read</span></a>
+<a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container: combine primitives</span><span>build</span></a>
+<a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API: /dev/kvm ioctl</span><span>read</span></a>
+<a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker: VMM event loop</span><span>build</span></a>
         </div>
 
         <h3>Run The Code</h3>

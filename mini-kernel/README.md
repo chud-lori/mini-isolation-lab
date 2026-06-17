@@ -19,6 +19,7 @@ contiguous stage2 binary at LBA 1 and above.
 - Checked memory and string primitives for kernel use
 - POSIX-like syscall layer: read, write, open, close, stat, getpid, exit
 - Tiny read-only in-memory filesystem for kernel tests and early init data
+- Simulated userspace runtime with a built-in init program and syscall-entry frame
 - Multiboot2 header and linker script for bootloader integration
 - 512-byte BIOS boot sector that loads a contiguous second-stage monitor
 - Raw BIOS disk image target: bootsector at LBA 0, stage2 at LBA 1+
@@ -83,7 +84,7 @@ make run
 
 - Partial POSIX-like API: `read`, `write`, `open`, `close`, `stat`, `getpid`, `exit`.
 - Partial filesystem: read-only in-memory files, no disk driver yet.
-- Userspace: not yet; syscalls are host-tested and callable from kernel code.
+- Userspace: partial simulated support; `kuser_run` executes a tiny init program through `ksyscall_entry`, but there is no hardware ring-3 transition, scheduler, or ELF user binary loader yet.
 - Networking: not yet.
 - SMP: not yet.
 - USB: not yet.

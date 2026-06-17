@@ -1,5 +1,19 @@
 #include <kernel/syscall.h>
 
+#ifndef KERNEL_HOST_TEST
+#include <kernel/log.h>
+#endif
+
+static void default_write_byte(void *ctx, char ch)
+{
+    (void)ctx;
+#ifdef KERNEL_HOST_TEST
+    (void)ch;
+#else
+    klog_putc(ch);
+#endif
+}
+
 static struct ksyscall_result ksyscall_result(
     intptr_t value,
     enum ksyscall_error error)
@@ -52,13 +66,11 @@ static struct ksyscall_result sys_write(
         return ksyscall_result(-1, KSYSCALL_EFAULT);
     }
 
-    if (task->write_byte == NULL) {
-        return ksyscall_result(-1, KSYSCALL_EINVAL);
-    }
+    ksyscall_write_byte_fn write_byte = task->write_byte != NULL ? task->write_byte : default_write_byte;
 
     bytes = (const char *)ptr;
     for (size_t i = 0; i < len; i++) {
-        task->write_byte(task->write_ctx, bytes[i]);
+        write_byte(task->write_ctx, bytes[i]);
     }
 
     return ksyscall_result((intptr_t)len, KSYSCALL_OK);

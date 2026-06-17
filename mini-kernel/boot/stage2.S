@@ -171,7 +171,7 @@ clear_screen:
     ret
 
 banner:
-    .asciz "Mini Kernel stage2 monitor\r\nType 'help' for commands.\r\n"
+    .asciz "Mini Kernel stage2 monitor\r\nType 'help' for kernel/userspace/init notes.\r\n"
 
 prompt:
     .asciz "mk> "
@@ -186,10 +186,10 @@ unknown:
     .asciz "unknown command\r\n"
 
 help_text:
-    .asciz "commands: help, about, clear, halt, reboot\r\n"
+    .asciz "commands: help, about, clear, halt, reboot\r\nkernel: syscall entry; userspace: init program\r\n"
 
 about_text:
-    .asciz "Mini Kernel: tiny BIOS-loaded OS monitor, built from scratch.\r\n"
+    .asciz "Mini Kernel: BIOS monitor plus tiny kernel/userspace lab.\r\n"
 
 halt_text:
     .asciz "halted\r\n"

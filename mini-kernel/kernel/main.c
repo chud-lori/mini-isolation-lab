@@ -3,6 +3,7 @@
 #include <kernel/mem.h>
 #include <kernel/string.h>
 #include <kernel/syscall.h>
+#include <kernel/user.h>
 
 static char banner_buffer[64];
 
@@ -64,7 +65,17 @@ void kernel_start(void)
     }
 
     klog_putc('\n');
-    klog_writeln("syscall dispatcher online; entering secure halt loop");
+    klog_writeln("syscall dispatcher online; launching init");
+
+    struct kuser_process init_process;
+    kuser_init_process(&init_process, 2, NULL, NULL);
+    enum kuser_error init_error = kuser_run(&init_process, kuser_init_program());
+    if (init_error != KUSER_OK || !init_process.exited || init_process.exit_status != 0) {
+        klog_writeln("init failed");
+        arch_halt();
+    }
+
+    klog_writeln("init exited cleanly; entering secure halt loop");
 
     arch_halt();
 }

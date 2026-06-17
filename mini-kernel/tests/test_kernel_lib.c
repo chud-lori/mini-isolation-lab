@@ -6,6 +6,8 @@
 #include <stdio.h>
 
 void test_syscalls(void);
+void test_user_runtime(void);
+void test_syscall_entry(void);
 void test_fs(void);
 
 static void test_strlen(void)
@@ -60,6 +62,8 @@ int main(void)
     test_checked_copy();
     test_fs();
     test_syscalls();
+    test_syscall_entry();
+    test_user_runtime();
     puts("kernel lib tests passed");
     return 0;
 }

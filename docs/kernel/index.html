@@ -423,6 +423,7 @@
         <nav class="nav" aria-label="Page sections">
           <a href="#boot">Boot</a>
           <a href="#image">Image</a>
+          <a href="#userspace">Userspace</a>
           <a href="#syscalls">Syscalls</a>
           <a href="#source">Source</a>
                   </nav>
@@ -456,6 +457,7 @@ stage2.bin loaded -> 0800:0000
 
 mk&gt; help
 commands: help, about, clear, halt, reboot
+kernel: syscall entry; userspace: init program
 
 kernel objects:
   kernel/main.o
@@ -472,7 +474,7 @@ kernel objects:
         <div class="flow">
           <div class="step"><span class="num">01</span><h3>Firmware</h3><p>BIOS reads the first disk sector into physical memory at <code>0x7c00</code> and jumps to it.</p></div>
           <div class="step"><span class="num">02</span><h3>Boot Sector</h3><p>The 512-byte loader sets real-mode state, saves the boot drive, and reads contiguous stage2 sectors.</p></div>
-          <div class="step"><span class="num">03</span><h3>Stage2</h3><p>The monitor runs at <code>0800:0000</code>, handles simple commands, and gives the project room to grow.</p></div>
+          <div class="step"><span class="num">03</span><h3>Stage2</h3><p>The monitor runs at <code>0800:0000</code>, handles simple commands, and names the next handoff: kernel, userspace, and the init program.</p></div>
           <div class="step"><span class="num">04</span><h3>Kernel</h3><p>The freestanding kernel path owns serial logging, panic handling, checked helpers, file lookup, and syscall dispatch.</p></div>
         </div>
       </section>
@@ -502,10 +504,22 @@ kernel objects:
         </div>
       </section>
 
+      <section class="section" id="userspace">
+        <div class="section-header">
+          <h2>Userspace Shape</h2>
+          <p>The current userspace is a tiny interpreted init program run through <code>kuser_run</code>, backed by validated task memory, task-local file descriptors, and the shared <code>ksyscall_entry</code> frame.</p>
+        </div>
+        <div class="grid-3">
+          <div class="panel"><h3>Init</h3><p><code>kernel_start</code> launches <code>kuser_init_program</code>, whose ops write a banner, open <code>/etc/motd</code>, read it, close it, and exit.</p></div>
+          <div class="panel"><h3>User Memory</h3><p>Every syscall checks the requested pointer range against <code>user_base</code> and <code>user_len</code> before copying or printing bytes.</p></div>
+          <div class="panel"><h3>Entry Contract</h3><p><code>ksyscall_entry</code> accepts a trap-shaped frame, calls <code>ksyscall_dispatch</code>, and writes retval, error, and exit state back to the frame.</p></div>
+        </div>
+      </section>
+
       <section class="section" id="syscalls">
         <div class="section-header">
           <h2>Syscall Dispatcher</h2>
-          <p>The dispatcher is not a CPU trap yet. It is the architecture-neutral contract a future trap handler will call, backed by a small read-only in-memory filesystem.</p>
+          <p><code>ksyscall_entry</code> is the actual userspace syscall entry today. It is still called directly by the userspace runner, not by a CPU trap; a future trap handler can populate the same frame and reuse this validation path.</p>
         </div>
         <table class="call-table">
           <thead><tr><th>Call</th><th>Arguments</th><th>Lesson</th></tr></thead>
@@ -524,15 +538,18 @@ kernel objects:
       <section class="section" id="source">
         <div class="section-header">
           <h2>Source Map</h2>
-          <p>Start with the raw machine entry point, then climb toward the kernel boundary.</p>
+          <p>Start with the raw machine entry point, then climb toward the kernel and userspace boundary.</p>
         </div>
         <div class="files">
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/boot/bootsector.S"><strong>boot/bootsector.S</strong><p>The first 512 bytes the BIOS executes.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/boot/stage2.S"><strong>boot/stage2.S</strong><p>The real-mode monitor loaded by the boot sector.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/main.c"><strong>kernel/main.c</strong><p>The freestanding kernel entry and serial log path.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/syscall.c"><strong>kernel/syscall.c</strong><p>The POSIX-like syscall dispatcher and validation logic.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/syscall_entry.c"><strong>kernel/syscall_entry.c</strong><p>The trap-shaped syscall frame adapter that feeds the dispatcher.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/user.c"><strong>kernel/user.c</strong><p>The tiny userspace runner and built-in init program.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/fs.c"><strong>kernel/fs.c</strong><p>A tiny read-only in-memory filesystem for early files.</p></a>
-          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_syscall.c"><strong>tests/test_syscall.c</strong><p>Host tests for write, getpid, exit, bad pointers, and unknown calls.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_syscall.c"><strong>tests/test_syscall.c</strong><p>Host tests for read, write, open, close, stat, getpid, exit, bad pointers, EOF, and fd errors.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_user.c"><strong>tests/test_user.c</strong><p>Host tests for the built-in userspace init program.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/Makefile"><strong>Makefile</strong><p>Builds the image, validates sectors, and compiles kernel objects.</p></a>
         </div>
       </section>
@@ -540,7 +557,7 @@ kernel objects:
       <section class="section" id="run">
         <div class="section-header">
           <h2>Build It</h2>
-          <p>The local build creates the raw image, runs host tests, and validates boot-sector constraints.</p>
+          <p>The local build creates the raw image, runs host tests for syscalls, filesystem, syscall entry, and userspace init, then validates boot-sector constraints.</p>
         </div>
         <div class="terminal">
           <div class="terminal-head"><div class="lights"><span></span><span></span><span></span></div><span>commands</span></div>
@@ -554,7 +571,7 @@ make run-image</code></pre>
     </main>
 
     <footer class="footer">
-      <p>Mini Kernel keeps unsafe machine boundaries visible, tests portable logic on the host, and leaves larger features for future builds.</p>
+      <p>Mini Kernel keeps unsafe machine boundaries visible, tests portable logic on the host, and grows userspace through the same syscall contract the future trap entry will use.</p>
     </footer>
   </div>
 </body>

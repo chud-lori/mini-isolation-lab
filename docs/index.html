@@ -22,7 +22,7 @@
       --accent-dark: #114a48;
       --warm: #8a4b16;
       --mark: #f3d36b;
-      --shadow: 0 14px 34px rgba(44, 35, 24, 0.08);
+      --shadow: 0 8px 22px rgba(44, 35, 24, 0.06);
     }
 
     * {
@@ -40,7 +40,8 @@
         var(--page);
       color: var(--ink);
       font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-      line-height: 1.72;
+      font-size: 17px;
+      line-height: 1.68;
     }
 
     a {
@@ -60,7 +61,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 318px minmax(0, 1fr);
+      grid-template-columns: 256px minmax(0, 1fr);
       min-height: 100vh;
     }
 
@@ -71,13 +72,13 @@
       overflow-y: auto;
       border-right: 1px solid var(--line);
       background: #f9f5ed;
-      padding: 28px 22px;
+      padding: 22px 16px;
     }
 
     .brand {
       border-bottom: 1px solid var(--line);
-      padding-bottom: 18px;
-      margin-bottom: 18px;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
     }
 
     .brand .crumb {
@@ -89,7 +90,7 @@
 
     .brand h1 {
       margin: 7px 0 8px;
-      font-size: 1.78rem;
+      font-size: 1.28rem;
       line-height: 1.05;
       letter-spacing: 0;
     }
@@ -97,14 +98,14 @@
     .brand p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.96rem;
+      font-size: 0.86rem;
       line-height: 1.5;
     }
 
     .nav-label {
-      margin: 22px 0 10px;
+      margin: 18px 0 8px;
       color: var(--warm);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -120,10 +121,10 @@
 
     nav a {
       display: grid;
-      grid-template-columns: 48px 1fr;
-      gap: 10px;
+      grid-template-columns: 34px 1fr;
+      gap: 8px;
       align-items: baseline;
-      padding: 9px 10px;
+      padding: 7px 8px;
       border-radius: 6px;
       color: var(--ink);
       text-decoration: none;
@@ -138,12 +139,12 @@
 
     .part-number {
       color: var(--accent-dark);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 800;
     }
 
     .nav-title {
-      font-size: 0.94rem;
+      font-size: 0.9rem;
     }
 
     main {
@@ -155,23 +156,23 @@
       background:
         linear-gradient(135deg, rgba(28, 107, 104, 0.11), transparent 46%),
         var(--paper);
-      padding: 56px 42px 42px;
+      padding: 34px 36px 30px;
     }
 
     .article {
-      width: min(860px, calc(100% - 48px));
+      width: min(780px, calc(100% - 40px));
       margin: 0 auto;
     }
 
     .hero .article {
       margin: 0;
-      width: min(920px, 100%);
+      width: min(780px, 100%);
     }
 
     .kicker {
       color: var(--warm);
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -184,62 +185,71 @@
     }
 
     .hero h2 {
-      margin: 10px 0 16px;
-      max-width: 780px;
-      font-size: clamp(2.35rem, 7vw, 5.6rem);
+      margin: 8px 0 14px;
+      max-width: 720px;
+      font-size: clamp(2.2rem, 4.8vw, 4.2rem);
     }
 
     .hero p {
-      max-width: 760px;
+      max-width: 720px;
       margin: 0;
       color: #393a3d;
-      font-size: 1.14rem;
+      font-size: 1rem;
     }
 
     .hero-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      max-width: 900px;
-      margin-top: 28px;
+      max-width: 720px;
+      margin-top: 20px;
     }
 
     .stat {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: rgba(255, 253, 248, 0.78);
-      padding: 14px;
+      padding: 11px 12px;
     }
 
     .stat strong {
       display: block;
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       line-height: 1.1;
     }
 
     .stat span {
       color: var(--muted);
-      font-size: 0.94rem;
+      font-size: 0.84rem;
     }
 
     section {
-      padding: 42px 0;
+      padding: 30px 0;
       border-bottom: 1px solid var(--line);
     }
 
     section h2 {
       margin: 0 0 14px;
-      font-size: 2.1rem;
+      font-size: 1.82rem;
     }
 
     section h3 {
-      margin: 26px 0 8px;
-      font-size: 1.24rem;
+      margin: 22px 0 8px;
+      font-size: 1.2rem;
+    }
+
+    section h4 {
+      margin: 20px 0 7px;
+      color: var(--accent-dark);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     p {
-      margin: 0 0 15px;
-      font-size: 1.05rem;
+      margin: 0 0 14px;
+      font-size: 1rem;
     }
 
     ul,
@@ -252,12 +262,12 @@
     }
 
     .lesson {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--paper);
-      box-shadow: var(--shadow);
-      padding: 24px;
-      margin: 22px 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+      margin: 0 auto;
     }
 
     .lesson-header {
@@ -266,8 +276,8 @@
       align-items: flex-start;
       justify-content: space-between;
       border-bottom: 1px solid var(--line);
-      padding-bottom: 14px;
-      margin-bottom: 16px;
+      padding-bottom: 11px;
+      margin-bottom: 15px;
     }
 
     .lesson-title {
@@ -281,7 +291,7 @@
 
     .lesson-title h3 {
       margin: 0;
-      font-size: 1.45rem;
+      font-size: 1.75rem;
     }
 
     .source-link {
@@ -291,10 +301,10 @@
       justify-content: center;
       border: 1px solid var(--accent);
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 6px 9px;
       color: var(--accent-dark);
       background: #eef7f5;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 800;
       text-decoration: none;
     }
@@ -310,10 +320,10 @@
       border: 1px dashed var(--line-strong);
       border-radius: 8px;
       background: var(--paper-2);
-      padding: 16px;
+      padding: 13px;
       white-space: pre;
       line-height: 1.42;
-      font-size: 0.92rem;
+      font-size: 0.86rem;
     }
 
     pre,
@@ -322,9 +332,9 @@
       border-radius: 8px;
       background: var(--code);
       color: var(--code-ink);
-      padding: 17px;
-      line-height: 1.48;
-      font-size: 0.92rem;
+      padding: 14px;
+      line-height: 1.44;
+      font-size: 0.86rem;
     }
 
     code {
@@ -346,13 +356,31 @@
       border-left: 5px solid var(--accent);
       border-radius: 6px;
       background: #eef7f5;
-      padding: 15px 17px;
-      margin: 18px 0;
+      padding: 13px 15px;
+      margin: 16px 0;
     }
 
     .callout.warning {
       border-left-color: var(--warm);
       background: #fff4df;
+    }
+
+    .checkpoint {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbf7ef;
+      padding: 12px 14px;
+      margin: 14px 0;
+    }
+
+    .checkpoint strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--warm);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .compare {
@@ -379,7 +407,7 @@
       color: var(--muted);
     }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1080px) {
       .layout {
         display: block;
       }
@@ -393,10 +421,11 @@
 
       nav ol {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2px 10px;
       }
 
       .hero {
-        padding: 40px 24px 32px;
+        padding: 32px 22px 28px;
       }
 
       .hero-grid {
@@ -410,7 +439,7 @@
       }
 
       .article {
-        width: min(100% - 28px, 860px);
+        width: min(100% - 28px, 780px);
       }
 
       .lesson {
@@ -492,13 +521,38 @@ microVM:
             </div>
             <a class="source-link" data-src="src/part-01-syscalls/syscall_write.c" href="../src/part-01-syscalls/syscall_write.c">source</a>
           </div>
-          <p>A syscall is how a normal program asks the Linux kernel to do privileged work. Printing text, opening files, creating processes, mapping memory, and mounting filesystems all go through syscalls.</p>
-          <pre><code class="language-c">printf("hello")
+          <p>A syscall is how a normal program asks the Linux kernel to do privileged work. Your application runs in user mode, which is intentionally limited. It cannot directly write to a disk, create another process, change a network interface, mount a filesystem, or map new memory pages. For those operations it must cross into the kernel through a syscall.</p>
+          <p>Most of the time you do not call syscalls manually. You call a library function such as `printf`, `open`, or `malloc`, and the C library eventually calls the right syscall for you. This is convenient, but it hides the most important boundary in operating systems: user code asks, the kernel decides.</p>
+          <pre><code class="language-text">printf("hello")
   -> C library
   -> write(1, "hello", 5)
   -> Linux kernel
   -> terminal</code></pre>
-          <p>The source for this part skips `printf` and calls `SYS_write` directly. That makes the user-to-kernel boundary visible.</p>
+          <p>The source for this part skips `printf` and calls `SYS_write` directly. `STDOUT_FILENO` is file descriptor `1`, which usually points at your terminal. The message pointer and length tell the kernel which bytes should be written. The return value tells you how many bytes were written, or whether the kernel rejected the request.</p>
+          <p>This matters for containers because container isolation is mostly syscall-driven. Later parts call `clone`, `mount`, `chroot`, and `mmap`. Those calls are not magic container APIs. They are ordinary Linux syscalls used carefully.</p>
+          <h4>What to notice in the source</h4>
+          <p>The program includes `sys/syscall.h`, then calls `syscall(SYS_write, ...)`. That first argument, `SYS_write`, is the syscall number chosen by the platform headers. The remaining arguments match the Linux `write(2)` syscall: file descriptor, buffer pointer, and byte count.</p>
+          <p>The message lives in the process memory. The kernel does not receive a string object. It receives an address and a length. That is why the program uses `strlen(message)`. If the length is wrong, the kernel may write too few bytes or too many bytes from memory after the message.</p>
+          <p>The return value is a contract. A positive value means bytes were written. A negative value means the kernel rejected the request, and the C library exposes the reason through `errno`. This pattern appears everywhere in low-level Linux code: ask the kernel, check the return value, handle failure explicitly.</p>
+          <h4>Why this comes first</h4>
+          <p>Containers and microVMs both look complicated, but they are built on the same request-and-response boundary. A container runtime asks Linux to create namespaces. A VMM asks KVM to create a VM. A filesystem tool asks Linux to mount a path. The names are different, but the shape is the same: userspace asks the kernel to perform privileged work.</p>
+          <p>After this part, read the source and run it with `strace` on Linux. `strace` will show the actual syscall crossing. That one habit makes later container runtime behavior much easier to understand.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The include `sys/syscall.h` gives the program syscall numbers such as `SYS_write`. The include `unistd.h` gives constants such as `STDOUT_FILENO`. The include `string.h` is used only to calculate the byte length of the message. None of those headers create isolation; they only let this small C program speak the kernel's calling convention.</p>
+          <p>The direct call is `syscall(SYS_write, STDOUT_FILENO, message, strlen(message))`. The kernel receives four things: the syscall number, the file descriptor, the address of the buffer, and the number of bytes. It does not know this is a "C string" in the friendly high-level sense. It knows there is a pointer and a size.</p>
+          <p>File descriptor `1` is stdout by convention. It may point to your terminal, a file, a pipe, or something else depending on how the process was started. This is another core Unix idea: programs do not need to know exactly what is behind a file descriptor. They just read and write bytes.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-01-syscalls
+./part-01-syscalls</code></pre>
+          <p>Expected output:</p>
+          <pre><code class="language-text">part 01: hello through the write syscall</code></pre>
+          <h4>Debug it with strace</h4>
+          <pre><code class="language-bash">strace ./part-01-syscalls</code></pre>
+          <p>You should see a `write(1, ...)` call in the trace. There will also be startup-related syscalls from the dynamic loader and C runtime. Do not worry about those yet. Focus on the write call made by the program.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why a normal process cannot just write to the terminal hardware directly, why it passes a pointer and length to the kernel, and why checking syscall return values matters.</p>
+          </div>
         </div>
       </section>
 
@@ -511,12 +565,41 @@ microVM:
             </div>
             <a class="source-link" data-src="src/part-02-memory/mmap_memory.c" href="../src/part-02-memory/mmap_memory.c">source</a>
           </div>
-          <p>`malloc` asks the C allocator for memory. The allocator may ask the kernel for more pages using `mmap` or `brk`. A VMM also uses host memory, then tells KVM to expose that memory as guest physical RAM.</p>
+          <p>`malloc` asks the C allocator for memory. The allocator manages chunks inside your process, but it does not create physical RAM. When it needs more memory from the operating system, it asks the kernel for pages, commonly through `mmap` or `brk`.</p>
+          <p>The address your program receives is a virtual address. Another process can have the same virtual address and still refer to different physical memory. The kernel and CPU page tables keep those mappings separate. This is one of the reasons processes are isolated by default.</p>
           <pre><code class="language-text">host VMM process
   mmap(2 MiB)
   -> host virtual memory
   -> KVM maps it as guest physical memory</code></pre>
-          <p>This is why the microVM demo starts by allocating a memory region before it creates and runs a vCPU.</p>
+          <p>The microVM demo uses this idea directly. It calls `mmap` in the host VMM process, then passes that memory region to KVM with `KVM_SET_USER_MEMORY_REGION`. From the host point of view, it is just memory in a process. From the guest point of view, that region becomes physical RAM.</p>
+          <p>When you read the source, focus on the difference between memory owned by the VMM process and memory seen by the guest. This distinction is central to understanding how a microVM can have its own RAM without owning the machine's real memory controller.</p>
+          <h4>Mental model</h4>
+          <p>Think of virtual memory as a private address book for each process. Your program can say, "write to address 0x400000," but that address is not automatically a physical RAM address. The CPU's memory-management unit and the kernel's page tables translate it.</p>
+          <p>This is why process isolation works at all. Process A and process B can both have a pointer with the same numeric value, but those pointers can map to different physical pages. The kernel decides which mappings exist and what permissions they have: readable, writable, executable, shared, or private.</p>
+          <h4>malloc vs mmap</h4>
+          <p>`malloc` is a convenience layer. It is excellent for normal application memory, but it hides where memory comes from. `mmap` is closer to the kernel. It can allocate anonymous memory, map files into memory, create shared memory, or reserve large address ranges.</p>
+          <p>The part source prints one string stored in `malloc` memory and one string stored in `mmap` memory. The output looks boring on purpose. The important thing is not the printed string; the important thing is that both addresses are valid only because userspace and the kernel agreed to create usable memory mappings.</p>
+          <h4>Connection to microVMs</h4>
+          <p>A VMM such as Firecracker allocates memory in the host process, then asks KVM to treat that region as guest RAM. The guest kernel thinks it owns physical memory starting at guest physical address zero. In reality, those bytes are backed by memory pages in a host process.</p>
+          <p>This is a powerful idea. It means the host can start, stop, snapshot, or limit a microVM using ordinary kernel mechanisms around memory ownership, while the guest still gets a convincing machine-like environment.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The source first calls `malloc(64)`. That asks the C allocator for a small chunk of memory. For small allocations, the allocator may reuse space it already obtained earlier. This is why `malloc` is not always a direct syscall.</p>
+          <p>Then the program asks Linux for the system page size with `sysconf(_SC_PAGESIZE)`. Memory mapping happens in pages. On many machines the page size is 4096 bytes, but code should ask instead of assuming.</p>
+          <p>The `mmap` call asks for one anonymous private page with read and write permission. Anonymous means it is not backed by a normal file. Private means writes are private to this process. The returned pointer is a virtual address that the process may read and write.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-02-memory
+./part-02-memory</code></pre>
+          <p>Expected output will include two strings and the page size:</p>
+          <pre><code class="language-text">malloc: memory managed by the C allocator
+mmap: memory requested directly from the kernel
+page size: 4096 bytes</code></pre>
+          <h4>Why this matters for isolation</h4>
+          <p>Every process gets its own virtual address space. That default isolation is weaker than a container or a VM, but it is the first layer. A bug in one normal process should not let it read arbitrary memory from another normal process because their address spaces are different.</p>
+          <p>A container does not create a new memory-management universe. It is still host processes using host virtual memory. Cgroups can limit how much memory those processes use. A microVM, however, adds another translation layer: guest virtual memory maps to guest physical memory, and guest physical memory maps to host memory owned by the VMM process.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why the VMM can allocate guest RAM with `mmap`, why the guest does not directly own real RAM, and how this differs from a container process using host memory directly.</p>
+          </div>
         </div>
       </section>
 
@@ -529,9 +612,36 @@ microVM:
             </div>
             <a class="source-link" data-src="src/part-03-processes/clone_process.c" href="../src/part-03-processes/clone_process.c">source</a>
           </div>
-          <p>Before containers, you need processes. Linux has `fork`, but container runtimes commonly use `clone` because it can create a child process and choose which kernel resources are shared or isolated.</p>
+          <p>Before containers, you need processes. A process is a running program with its own memory mappings, file descriptors, credentials, and process ID. Linux can create processes with `fork`, but container runtimes often use `clone` because `clone` lets the caller choose which pieces of kernel state are shared and which pieces are separated.</p>
+          <p>In this part, `clone` is used without namespace flags. That keeps the example simple: the parent allocates a stack for the child, asks Linux to start `child_main`, and waits for the child to exit.</p>
           <pre><code class="language-c">clone(child_main, stack + STACK_SIZE, SIGCHLD, NULL)</code></pre>
-          <p>At this point there is no container yet. There is only a parent process and a child process.</p>
+          <p>The custom stack matters because Linux starts the child at the function pointer you provide. The child needs stack memory for local variables, function calls, and return addresses. In later parts we keep the same shape, but add namespace flags to turn this ordinary child into a more isolated child.</p>
+          <p>At this point there is no container yet. There is only a parent process and a child process. That is intentional: containers are not a separate primitive. They are built by composing process creation with isolation features.</p>
+          <h4>Why not start with Docker?</h4>
+          <p>Docker is useful, but it hides the construction process. It gives you a nice command-line interface and image workflow, but underneath it still needs Linux to create processes, set up namespaces, configure cgroups, mount filesystems, and start a command. This part removes everything except process creation.</p>
+          <p>The parent prints its PID and the child's PID. The child prints its own PID and parent PID. That is enough to prove that Linux created a new schedulable execution context. The child has its own call stack and can return independently.</p>
+          <h4>fork and clone</h4>
+          <p>`fork` creates a new process that initially looks like a copy of the parent. `clone` is more configurable. With different flags, `clone` can behave like a process creator, a thread creator, or the start of a container. Threads share more state. Container-like children share less state and receive isolated views.</p>
+          <p>In the mini-container, the important move is not replacing `clone`; it is changing the flags passed to `clone`. That is why this part exists. Once you can read a plain `clone`, namespace flags become easier to reason about.</p>
+          <h4>Failure modes</h4>
+          <p>Low-level code has visible failure cases. `malloc` can fail. `clone` can fail. `waitpid` can fail. Production runtimes spend a large amount of code on setup, validation, rollback, and cleanup. The tutorial keeps error handling short, but it still checks the critical calls because kernel programming without return-value checks becomes misleading quickly.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The program allocates a stack with `malloc(STACK_SIZE)`. On x86 and most common architectures, stacks grow downward, so the child is started at `stack + STACK_SIZE`, the high end of the allocated memory region. If you passed the low end instead, the stack would quickly write outside the intended area.</p>
+          <p>The flag `SIGCHLD` tells Linux to send the usual child-exit signal and makes the child waitable with `waitpid`. That keeps this example process-like. Later parts add namespace flags next to `SIGCHLD`.</p>
+          <p>The parent calls `waitpid(child, NULL, 0)`. Without waiting, the parent could exit before the child prints, and the child might briefly become orphaned. Runtime supervisors care deeply about this kind of lifecycle management.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-03-processes
+./part-03-processes</code></pre>
+          <p>Expected output will look similar to this, with different PIDs:</p>
+          <pre><code class="language-text">parent: pid=1200 child=1201
+child: pid=1201 parent=1200</code></pre>
+          <h4>Common confusion</h4>
+          <p>A child process is not automatically isolated in the container sense. It has separate memory, but it still sees the same hostname, same mount table, same network namespace, and same process list unless you request otherwise.</p>
+          <p>This is why saying "containers are just processes" is true but incomplete. They are processes with carefully configured kernel views and limits.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to describe what the parent creates, why the child needs a stack, and why adding namespace flags to `clone` is the bridge from ordinary process creation to container creation.</p>
+          </div>
         </div>
       </section>
 
@@ -544,9 +654,37 @@ microVM:
             </div>
             <a class="source-link" data-src="src/part-04-namespaces/uts_namespace.c" href="../src/part-04-namespaces/uts_namespace.c">source</a>
           </div>
-          <p>A namespace gives a process a different view of one system resource. The first namespace example uses `CLONE_NEWUTS`, which lets the child have a different hostname from the host.</p>
+          <p>A namespace gives a process a different view of one system resource. The resource is still managed by the same host kernel, but the process sees a scoped version of it. That is why containers can feel like separate machines even though they are still host processes.</p>
+          <p>The first namespace example uses `CLONE_NEWUTS`. UTS is the namespace for hostname and domain name. The child changes its hostname to `part-04-namespace`; the parent still sees the original host name.</p>
           <pre><code class="language-c">clone(child_main, stack + STACK_SIZE, CLONE_NEWUTS | SIGCHLD, NULL)</code></pre>
-          <p>Containers combine several namespaces: UTS for hostname, PID for process IDs, mount for filesystems, network for network interfaces, and IPC for inter-process communication.</p>
+          <p>This is the first "container feeling" moment: two processes ask the same kernel for the hostname and receive different answers. No VM has been created. No second kernel exists. Linux is simply presenting different views to different process groups.</p>
+          <p>Containers combine several namespaces: UTS for hostname, PID for process IDs, mount for filesystems, network for network interfaces, and IPC for inter-process communication. One namespace is easy to understand. A container is what you get when several namespaces are configured together.</p>
+          <h4>The important phrase: different view</h4>
+          <p>A namespace does not necessarily create a new physical resource. A UTS namespace does not create a new computer. A PID namespace does not create a new CPU. A network namespace does not create a new network card by itself. It creates a separate kernel view that can then be connected to resources.</p>
+          <p>This is why containers are fast. Creating a namespace is much cheaper than booting a full machine. The process is still running on the host kernel and scheduled by the host kernel, but the kernel answers certain questions differently for that process.</p>
+          <h4>Common namespaces</h4>
+          <p>The UTS namespace controls hostname and domain name. The PID namespace controls which processes are visible and what process IDs they appear to have. The mount namespace controls the mount table. The network namespace controls interfaces, routes, firewall rules, and sockets. The IPC namespace controls certain inter-process communication resources.</p>
+          <p>User namespaces are especially important in real runtimes because they let a process appear as root inside a namespace while mapping to a less privileged user outside. This demo avoids user namespaces to stay readable, but a production-grade sandbox should not ignore them.</p>
+          <h4>What this part proves</h4>
+          <p>After the child calls `sethostname`, the parent still sees the original hostname. That proves the host was not globally renamed. The mutation happened inside the child's UTS namespace. That small proof is the basis for understanding every other namespace: local change, shared kernel.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The parent first reads and prints the current hostname. Then it calls `clone` with `CLONE_NEWUTS | SIGCHLD`. That one namespace flag is the only major difference from Part 03.</p>
+          <p>Inside the child, `sethostname("part-04-namespace", ...)` changes the hostname visible inside the child's UTS namespace. Then the child calls `gethostname` and prints what it sees. After the child exits, the parent calls `gethostname` again and prints the original host value.</p>
+          <p>The parent and child are asking the same kernel the same question. They receive different answers because they are in different UTS namespaces.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-04-namespaces
+sudo ./part-04-namespaces</code></pre>
+          <p>Creating some namespaces may require privileges depending on your Linux configuration. Expected output looks like:</p>
+          <pre><code class="language-text">parent sees hostname before clone: my-host
+child sees hostname: part-04-namespace
+parent still sees hostname: my-host</code></pre>
+          <h4>How this scales to containers</h4>
+          <p>A container runtime repeats this idea across multiple resources. It asks for a PID namespace so the child has a private process-ID view. It asks for a mount namespace so the child has a private mount table. It asks for a network namespace so the child can have isolated interfaces and routes.</p>
+          <p>Each namespace answers a narrow question. Together, they create the illusion of a small machine. The illusion is useful, but remember the host kernel is still the kernel doing the work.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why the child hostname changes but the host hostname does not, and why namespace isolation is different from VM isolation.</p>
+          </div>
         </div>
       </section>
 
@@ -559,7 +697,8 @@ microVM:
             </div>
             <a class="source-link" data-src="src/part-05-rootfs/chroot_exec.c" href="../src/part-05-rootfs/chroot_exec.c">source</a>
           </div>
-          <p>`chroot` changes what a process sees as `/`. This is not a complete security boundary by itself, but it is a useful learning step toward root filesystems in containers.</p>
+          <p>`chroot` changes what a process sees as `/`. If you point it at a small directory containing BusyBox, then `/bin/sh` inside that process is resolved inside the new root directory instead of the host root directory.</p>
+          <p>This is where filesystem isolation becomes concrete. The process is not given a copy of the whole host filesystem. It is placed inside a different tree. If the new root has no `/home`, then `/home` does not exist from that process's perspective.</p>
           <div class="diagram">host root:
   /bin
   /etc
@@ -569,7 +708,36 @@ container rootfs:
   /bin/sh
   /proc
   /tmp</div>
-          <p>Real runtimes use stronger setup, often including `pivot_root`, bind mounts, read-only mounts, and careful capability dropping.</p>
+          <p>The example is intentionally small: `chroot`, `chdir("/")`, then `execvp`. It teaches the path lookup idea before adding mount namespaces and `/proc` in the full container demo.</p>
+          <p>`chroot` alone is not a strong security boundary, especially for privileged processes. Real runtimes use stronger setup, often including `pivot_root`, bind mounts, read-only mounts, user namespaces, and careful capability dropping.</p>
+          <h4>Why rootfs matters</h4>
+          <p>A container image is mostly a filesystem tree plus metadata. When you run a container, the runtime prepares a root filesystem and starts a process inside it. That process resolves `/bin/sh`, `/etc/resolv.conf`, `/lib`, and every other absolute path relative to that prepared root.</p>
+          <p>If the root filesystem does not contain a needed dynamic linker or shared library, the program may fail even though the binary exists. BusyBox is useful for learning because it can provide many basic commands from one small binary, and a static BusyBox needs fewer supporting files.</p>
+          <h4>chroot limitations</h4>
+          <p>`chroot` changes path resolution, but it does not automatically remove privileges, close file descriptors, create a private mount table, or prevent every escape technique available to a privileged process. Treat it as a teaching tool, not a complete sandbox.</p>
+          <p>The mini-container improves the picture by using a mount namespace and mounting `/proc` inside the new root. Even then, it is still educational. A hardened container runtime needs a much larger checklist.</p>
+          <h4>What to try</h4>
+          <p>Create a rootfs with only BusyBox and a few symlinks. Enter it with this part's program. Run `ls /`, `hostname`, and `ps`. Some commands may fail until the expected directories or pseudo-filesystems exist. Those failures are useful because they show how much normal Linux tooling expects from the filesystem.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The program expects a root filesystem path and a command. It calls `chroot(argv[1])`, then immediately calls `chdir("/")`. That second call matters because changing root does not automatically change the current working directory in every case. Good setup code makes the process current directory consistent with the new root.</p>
+          <p>Finally it calls `execvp(argv[2], &argv[2])`. This replaces the setup program with the requested command. If you run `/bin/sh`, the process becomes a shell inside the new root filesystem.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-05-rootfs
+mkdir -p rootfs/bin
+cp /bin/busybox rootfs/bin/
+ln -s busybox rootfs/bin/sh
+sudo ./part-05-rootfs ./rootfs /bin/sh</code></pre>
+          <p>Inside the shell, try:</p>
+          <pre><code class="language-bash">pwd
+ls /
+echo hello</code></pre>
+          <h4>What will feel broken</h4>
+          <p>Many commands may be missing because your rootfs is tiny. `/proc` may not exist yet. DNS config may not exist. Shared libraries may be missing if you copied a dynamic binary instead of a static one. This is exactly why container images contain a full filesystem layout, not just an application binary.</p>
+          <p>That discomfort is useful. It teaches that a container's root filesystem is an environment. The runtime does not just isolate a process; it prepares the world the process expects to run in.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why `/bin/sh` inside the rootfs is different from `/bin/sh` on the host, and why changing the root filesystem alone is not enough to make a secure container.</p>
+          </div>
         </div>
       </section>
 
@@ -582,12 +750,38 @@ container rootfs:
             </div>
             <a class="source-link" data-src="src/part-06-cgroups/cgroup_limit.c" href="../src/part-06-cgroups/cgroup_limit.c">source</a>
           </div>
-          <p>Namespaces change what a process can see. Cgroups limit what a process can use. The example writes to cgroup v2 files like `pids.max`, `memory.max`, and `cgroup.procs`.</p>
+          <p>Namespaces change what a process can see. Cgroups limit what a process can use. This distinction is important: a PID namespace can make a process see itself as PID 1, but it does not stop that process from consuming all memory. Cgroups are the resource-control side of isolation.</p>
+          <p>On cgroup v2 systems, controls are exposed as files under `/sys/fs/cgroup`. Writing to those files changes kernel-enforced limits. The example creates a cgroup, sets a process-count limit and memory limit, then writes its own PID into `cgroup.procs` so the current process joins that group.</p>
           <pre><code class="language-text">/sys/fs/cgroup/demo/
   pids.max       -> maximum number of processes
   memory.max     -> maximum memory
   cgroup.procs   -> PIDs that belong to this cgroup</code></pre>
-          <p>This is the resource-control half of containers.</p>
+          <p>This is the resource-control half of containers. Docker, containerd, and Kubernetes all rely on cgroups to enforce CPU, memory, process-count, and I/O policy. Without cgroups, namespaces can hide the host, but they cannot keep one workload from starving others.</p>
+          <h4>Views vs limits</h4>
+          <p>A namespace answers the question, "What does this process see?" A cgroup answers, "How much can this process use?" Good isolation needs both. Without namespaces, the process sees too much. Without cgroups, the process can consume too much.</p>
+          <p>For example, a fork-heavy program inside a PID namespace may see only its own small process tree, but without a process-count limit it could still create enough processes to pressure the host. `pids.max` exists to stop that class of failure.</p>
+          <h4>cgroup v2 files</h4>
+          <p>cgroup v2 uses a unified hierarchy. You create a directory for a group, write control values into files, and move processes into that group by writing PIDs to `cgroup.procs`. It looks like file I/O, but those files are kernel control knobs.</p>
+          <p>The tutorial sets `memory.max` to 64 MiB and `pids.max` to 8. In real systems, orchestration layers calculate and apply these values from configuration such as Docker flags or Kubernetes resource limits.</p>
+          <h4>Why this part is separate</h4>
+          <p>It is tempting to jump straight to the final mini-container, but separating cgroups makes the design clearer. Namespaces do not enforce memory limits. The root filesystem does not enforce CPU fairness. Each Linux primitive solves one part of the isolation problem.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The program creates `/sys/fs/cgroup/part-06-cgroup-demo`. On a cgroup v2 machine, creating a directory creates a new cgroup. The program then writes `8` to `pids.max`, meaning processes in that group may create only a small number of processes.</p>
+          <p>It writes `67108864` to `memory.max`, which is 64 MiB in bytes. Finally it writes its own PID into `cgroup.procs`. That is the moment the running process joins the cgroup and becomes subject to the limits.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-06-cgroups
+sudo ./part-06-cgroups</code></pre>
+          <p>Expected output:</p>
+          <pre><code class="language-text">this process is now limited by /sys/fs/cgroup/part-06-cgroup-demo
+pids.max=8 memory.max=64MiB</code></pre>
+          <h4>Important cleanup note</h4>
+          <p>cgroup cleanup can be blocked if processes remain in the group. Production runtimes track cgroup lifecycle carefully. This tutorial keeps the code small, but real systems must handle nested cgroups, delegated controllers, cleanup, and failure rollback.</p>
+          <h4>How Docker maps to this</h4>
+          <p>When you run a container with memory or process limits, the runtime eventually applies cgroup settings. The user-facing command might be friendly, but the enforcement point is still the Linux kernel reading values from cgroup control files.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why namespaces and cgroups solve different problems, and why a container platform needs both for practical multi-tenant isolation.</p>
+          </div>
         </div>
       </section>
 
@@ -600,10 +794,47 @@ container rootfs:
             </div>
             <a class="source-link" data-src="src/part-07-container/mini_container.c" href="../src/part-07-container/mini_container.c">source</a>
           </div>
-          <p>The mini-container combines the earlier ideas: `clone` with namespace flags, a new root filesystem, a private mount namespace, `/proc`, and best-effort cgroup limits.</p>
+          <p>The mini-container combines the earlier ideas: `clone` with namespace flags, a new root filesystem, a private mount namespace, `/proc`, and best-effort cgroup limits. It is still small enough to read in one sitting, but it now has the shape of a real container runtime.</p>
+          <p>The parent process creates a child with several namespace flags. Before letting the child continue, the parent tries to move it into a cgroup. The child then sets a hostname, makes mount propagation private, enters the new root filesystem, mounts `/proc`, and finally runs the command you requested.</p>
           <pre><code class="language-c">CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS |
 CLONE_NEWIPC | CLONE_NEWNET</code></pre>
+          <p>The `/proc` mount is worth noticing. Tools like `ps` read from `/proc`. If you mount `proc` from inside a PID namespace, the process list reflects that namespace. This is why a process inside a container can see a small process tree while the host still sees everything.</p>
           <div class="callout warning"><strong>Learning tool, not hardened sandbox.</strong> Real runtimes also need user namespaces, seccomp, capability dropping, AppArmor or SELinux, image handling, and robust networking.</div>
+          <h4>Startup sequence</h4>
+          <p>The parent creates a pipe before cloning the child. The child starts, but waits on the pipe. This gives the parent a moment to apply cgroup limits before the child continues. Then the parent writes one byte to the pipe, and the child proceeds with setup. This is a simple synchronization trick.</p>
+          <p>The child sets its hostname, marks mounts private, enters the new root, changes directory to `/`, mounts `/proc`, and finally replaces itself with your command using `execvp`. After `execvp` succeeds, the child is no longer running the container setup code. It is running the command you asked for.</p>
+          <h4>Why mount propagation matters</h4>
+          <p>Mount propagation controls whether mount events spread between mount namespaces. The demo calls `mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)` before mounting `/proc`. This prevents mount changes inside the demo from propagating back to the host in surprising ways.</p>
+          <p>Real runtimes are careful with mount propagation because a sloppy mount setup can leak host paths into the container or leak container mounts back into the host namespace.</p>
+          <h4>What is missing compared with Docker</h4>
+          <p>There is no image format, no layered filesystem, no registry pull, no DNS setup, no virtual Ethernet pair, no seccomp profile, no user namespace mapping, no capability dropping, and no OCI config parser. That is the point: you can see the core kernel mechanics without reading a large runtime first.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The `child_config` struct carries the rootfs path, command arguments, and sync pipe descriptor into the child. This is a common pattern in low-level setup code: prepare a small configuration object before crossing into a new execution context.</p>
+          <p>The parent calls `clone` with several namespace flags. `CLONE_NEWPID` is especially interesting: the first process inside a new PID namespace becomes PID 1 from that namespace's point of view. PID 1 has special behavior in Linux, including responsibility for reaping orphaned children.</p>
+          <p>The child calls `mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)` before mounting `/proc`. This makes mount propagation private. Then it calls `chroot`, `chdir("/")`, creates `/proc` if needed, and mounts the `proc` filesystem.</p>
+          <p>After setup, `execvp(config->argv[0], config->argv)` replaces the setup code with the user's command. That is why a container is usually described as "running a process." The runtime prepares isolation, then the intended process takes over.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make mini-container
+mkdir -p rootfs/bin
+cp /bin/busybox rootfs/bin/
+ln -s busybox rootfs/bin/sh
+ln -s busybox rootfs/bin/ps
+ln -s busybox rootfs/bin/hostname
+ln -s busybox rootfs/bin/mount
+sudo ./mini-container ./rootfs /bin/sh</code></pre>
+          <p>Inside the container shell, try:</p>
+          <pre><code class="language-bash">hostname
+echo $$
+ps
+mount</code></pre>
+          <h4>What to compare from the host</h4>
+          <p>Open another terminal on the host and run `hostname`, `ps`, and `mount`. The point is not that the container created new physical hardware. The point is that the same host kernel presents different views to the containerized process and to the host process.</p>
+          <h4>Security reading</h4>
+          <p>This demo still runs with broad privileges. A real runtime reduces privileges before running untrusted code. It uses seccomp to restrict syscalls, drops Linux capabilities, configures AppArmor or SELinux, uses user namespaces where possible, and avoids exposing sensitive host paths.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to describe the startup sequence from parent process to isolated child to final command, and name at least three important security features missing from the demo.</p>
+          </div>
         </div>
       </section>
 
@@ -616,12 +847,35 @@ CLONE_NEWIPC | CLONE_NEWNET</code></pre>
             </div>
             <a class="source-link" data-src="src/part-08-kvm/kvm_api_version.c" href="../src/part-08-kvm/kvm_api_version.c">source</a>
           </div>
-          <p>KVM is the Linux kernel virtualization interface. A VMM opens `/dev/kvm`, sends ioctls, creates a VM, creates vCPUs, maps guest memory, and then repeatedly calls `KVM_RUN`.</p>
+          <p>KVM is the Linux kernel virtualization interface. It lets a userspace program act as a virtual machine monitor. That userspace program can be QEMU, Firecracker, Cloud Hypervisor, or our tiny demo.</p>
+          <p>The first KVM part does not create a VM yet. It only opens `/dev/kvm` and asks for the API version. This may feel small, but it proves two things: the host exposes KVM, and your process has permission to talk to it.</p>
           <pre><code class="language-c">open("/dev/kvm")
 ioctl(KVM_CREATE_VM)
 ioctl(KVM_CREATE_VCPU)
 ioctl(KVM_RUN)</code></pre>
-          <p>This part only checks the KVM API version. It is the smallest safe first touch before creating a full VM.</p>
+          <p>KVM is controlled mostly through `ioctl` calls. An `ioctl` is a syscall for device-specific commands. In container land, we were calling syscalls like `clone` and `mount`. In microVM land, the VMM calls `ioctl` on `/dev/kvm` to ask the kernel to create and run virtual CPUs.</p>
+          <p>This part is the smallest safe first touch before creating a full VM. If it fails, the later microVM code cannot run on that machine.</p>
+          <h4>What is KVM responsible for?</h4>
+          <p>KVM lets the real CPU execute guest instructions using hardware virtualization features. It is not a full virtual machine product by itself. KVM provides the kernel interface for creating VMs and vCPUs. A userspace VMM provides the rest: memory layout, device emulation, boot setup, disks, networking, logging, and policy.</p>
+          <p>This split is why QEMU, Firecracker, and other VMMs can all use KVM while feeling very different. QEMU is broad and supports many machines and devices. Firecracker is narrow and optimized for small server workloads.</p>
+          <h4>Why /dev/kvm is a file</h4>
+          <p>Linux exposes many kernel interfaces as files or file descriptors. `/dev/kvm` is opened like a file, but operations on it are device commands. When the VMM calls `ioctl(kvm_fd, KVM_CREATE_VM, ...)`, it is not writing text to a file. It is asking the KVM driver to create kernel-side VM state.</p>
+          <p>The API version check is a handshake. It makes sure the userspace headers and kernel KVM interface agree on the expected API version. That is a small but real example of how VMMs validate their environment before doing more complex work.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The program opens `/dev/kvm` with `O_RDWR | O_CLOEXEC`. Read-write access is needed because the VMM sends commands and receives state. `O_CLOEXEC` prevents the descriptor from accidentally leaking into future `exec` calls.</p>
+          <p>Then it calls `ioctl(kvm_fd, KVM_GET_API_VERSION, 0)`. The result should match `KVM_API_VERSION` from the Linux headers. If it does not match, the program exits because the userspace code and kernel interface may not agree.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make part-08-kvm
+./part-08-kvm</code></pre>
+          <p>If permission is denied, either run with `sudo` for learning or add your user to the `kvm` group and log in again:</p>
+          <pre><code class="language-bash">sudo usermod -aG kvm "$USER"</code></pre>
+          <h4>What if /dev/kvm is missing?</h4>
+          <p>If `/dev/kvm` does not exist, the host may not support hardware virtualization, virtualization may be disabled in firmware, the kernel module may not be loaded, or you may be inside an environment that does not expose nested virtualization.</p>
+          <p>This is one practical difference from the container demo. Namespaces are common on Linux systems. KVM requires hardware and host configuration support.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain why Firecracker is a host process but still needs `/dev/kvm`, and why KVM is not the same thing as a complete VM product.</p>
+          </div>
         </div>
       </section>
 
@@ -635,12 +889,41 @@ ioctl(KVM_RUN)</code></pre>
             <a class="source-link" data-src="src/part-09-microvm/mini_firecracker.c" href="../src/part-09-microvm/mini_firecracker.c">source</a>
           </div>
           <p>Firecracker is a production VMM. This course ends with a tiny VMM that shows the same core shape: create a VM, map guest memory, create a vCPU, run guest code, handle VM exits, and resume.</p>
+          <p>The guest code in this demo is not Linux. It is tiny hand-written x86 machine code that prints a message through a fake I/O port. That keeps the example readable. Booting a real Linux kernel would require more setup: kernel loading, boot parameters, a root filesystem, and virtual devices.</p>
           <div class="diagram">while guest is alive:
   KVM_RUN
   inspect exit reason
   emulate requested device or event
   resume guest</div>
-          <p>The guest writes characters to a fake I/O port. KVM exits to the host VMM, the VMM prints the character, and then the guest continues until it halts.</p>
+          <p>The guest writes characters to a fake I/O port. KVM exits to the host VMM, the VMM prints the character, and then the guest continues until it halts. This is the same event-loop idea behind real virtual devices: the guest thinks it touched hardware; the VMM receives an exit and emulates the device behavior.</p>
+          <p>Firecracker adds the production pieces this demo does not: a real guest kernel, virtio block and network devices, a jailer, seccomp filters, cgroups, snapshots, metrics, and a small API server. The core loop, though, is still recognizable after reading this part.</p>
+          <h4>The VMM loop</h4>
+          <p>The heart of the program is a loop around `KVM_RUN`. While the guest is executing ordinary instructions, the host userspace VMM is not interpreting every instruction. The CPU and KVM run the guest efficiently. The VMM becomes active when something happens that needs userspace handling.</p>
+          <p>One such event is I/O. The tiny guest writes a byte to port `0xe9`. KVM exits to userspace with `KVM_EXIT_IO`. The VMM reads the exit information from the shared `kvm_run` structure, prints the byte, and calls `KVM_RUN` again.</p>
+          <h4>Why this is like Firecracker</h4>
+          <p>Firecracker's devices are more serious than a fake debug port. It implements virtio block for disks and virtio net for networking. But the pattern is still: guest touches virtual hardware, KVM or the VMM observes an event, userspace emulates the device behavior, and the guest continues.</p>
+          <p>The other Firecracker design choice is minimalism. Traditional VMs may emulate many old devices for compatibility. Firecracker intentionally exposes a small device model because every exposed device is attack surface. Fewer devices means fewer places for guest-controlled input to reach host-side code.</p>
+          <h4>How to continue after this course</h4>
+          <p>The natural next step is to boot a real Linux kernel. That requires loading a kernel image into guest memory, setting boot parameters, providing a root filesystem, and implementing or reusing virtio devices. After that, study the OCI runtime spec on the container side and the Firecracker API model on the microVM side.</p>
+          <h4>Line-by-line walkthrough</h4>
+          <p>The program opens `/dev/kvm`, checks the API version, and creates a VM with `KVM_CREATE_VM`. It allocates guest memory with `mmap`, copies the tiny guest program into that memory, and registers the memory region with KVM.</p>
+          <p>Next it creates one vCPU with `KVM_CREATE_VCPU`. KVM exposes a shared `struct kvm_run` mapping for that vCPU. Each time the VMM calls `KVM_RUN`, KVM runs guest code until something happens that requires returning to userspace.</p>
+          <p>The `setup_real_mode` function sets the initial CPU state. This demo uses 16-bit real mode to avoid the extra code required for protected mode or long mode. The guest program is just enough machine code to write bytes to port `0xe9` and then halt.</p>
+          <p>The `handle_io_exit` function is the fake device. It checks that the guest wrote one byte to the expected port. Then it reads the byte from the `kvm_run` shared area and prints it on the host terminal.</p>
+          <h4>Run it</h4>
+          <pre><code class="language-bash">make mini-firecracker
+./mini-firecracker</code></pre>
+          <p>Expected output:</p>
+          <pre><code class="language-text">host VMM: starting vCPU
+hello from a tiny microVM
+host VMM: guest halted</code></pre>
+          <h4>How this maps to real Firecracker</h4>
+          <p>Real Firecracker does not run a tiny hand-written message loop. It boots a Linux kernel directly, attaches a root block device, configures virtio networking, exposes a metadata service, and applies jailer/seccomp/cgroup restrictions around the VMM process.</p>
+          <p>Still, the core structure remains: host process owns VM configuration, KVM runs guest CPU instructions, virtual device events exit to userspace, and the VMM handles those events. Understanding that loop makes Firecracker much less mysterious.</p>
+          <div class="checkpoint">
+            <strong>Checkpoint</strong>
+            <p>If you understand this part, you should be able to explain what `KVM_RUN` does, why VM exits happen, why the guest sees virtual hardware instead of real hardware, and why Firecracker can be both a host process and a VM monitor.</p>
+          </div>
         </div>
       </section>
 

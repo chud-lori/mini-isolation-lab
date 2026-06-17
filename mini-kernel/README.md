@@ -17,6 +17,8 @@ contiguous stage2 binary at LBA 1 and above.
 - Serial logger for early diagnostics
 - Panic path that prints and halts
 - Checked memory and string primitives for kernel use
+- POSIX-like syscall layer: read, write, open, close, stat, getpid, exit
+- Tiny read-only in-memory filesystem for kernel tests and early init data
 - Multiboot2 header and linker script for bootloader integration
 - 512-byte BIOS boot sector that loads a contiguous second-stage monitor
 - Raw BIOS disk image target: bootsector at LBA 0, stage2 at LBA 1+
@@ -77,12 +79,12 @@ make run
 - Panic and assertion failures halt safely
 - Portable logic covered by host tests
 
-## Non-Goals For The First Milestone
+## Support Matrix
 
-- POSIX compatibility
-- Userspace
-- Filesystem and disk drivers
-- Networking
-- SMP
-- USB
-- Full UEFI bootloader written from scratch
+- Partial POSIX-like API: `read`, `write`, `open`, `close`, `stat`, `getpid`, `exit`.
+- Partial filesystem: read-only in-memory files, no disk driver yet.
+- Userspace: not yet; syscalls are host-tested and callable from kernel code.
+- Networking: not yet.
+- SMP: not yet.
+- USB: not yet.
+- UEFI bootloader from scratch: not yet; BIOS raw-image path exists today.

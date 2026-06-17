@@ -23,6 +23,8 @@ HOST_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror -Ikernel/include -DKERNEL_HOST
 KERNEL_SRCS := \
 	kernel/main.c \
 	kernel/panic.c \
+	kernel/syscall.c \
+	kernel/fs.c \
 	kernel/lib/mem.c \
 	kernel/lib/string.c \
 	kernel/security/assert.c \
@@ -33,6 +35,10 @@ KERNEL_OBJS := $(KERNEL_SRCS:%.c=$(BUILD_DIR)/%.o) $(BUILD_DIR)/boot/multiboot2.
 
 HOST_TEST_SRCS := \
 	tests/test_kernel_lib.c \
+	tests/test_syscall.c \
+	tests/test_fs.c \
+	kernel/syscall.c \
+	kernel/fs.c \
 	kernel/lib/mem.c \
 	kernel/lib/string.c \
 	kernel/security/assert.c

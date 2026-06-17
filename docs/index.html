@@ -16,7 +16,7 @@
       </div>
       <div class="nav-label">Course Index</div>
       <nav aria-label="Course parts"><ol class="course-nav">
-<li><a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel</span></a><ul class="subparts"><li>boot sector</li><li>stage2 monitor</li><li>POSIX roadmap</li></ul></li>
+<li><a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel</span></a><ul class="subparts"><li>boot sector</li><li>stage2 monitor</li><li>syscall dispatcher</li></ul></li>
 <li><a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
 <li><a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
 <li><a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
@@ -44,7 +44,7 @@
         <p>The container side teaches how Linux isolates host processes with namespaces, root filesystems, and cgroups. The microVM side teaches how a host process uses KVM to run guest code behind a stronger VM boundary.</p>
 
         <div class="lesson-list">
-<a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel: boot and POSIX roadmap</span><span>new</span></a>
+<a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel: boot and syscall layer</span><span>new</span></a>
 <a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls: Kernel boundary</span><span>start</span></a>
 <a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory: malloc, mmap, pages</span><span>read</span></a>
 <a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes: clone and waitpid</span><span>read</span></a>
@@ -57,7 +57,7 @@
         </div>
 
         <h3>Kernel Companion</h3>
-        <p>The new <a href="kernel/index.html">Mini Kernel course page</a> uses the repository's tiny OS as learning material. It explains the boot binaries, why the first implementation uses C and assembly, and how the kernel can grow toward a POSIX subset.</p>
+        <p>The new <a href="kernel/index.html">Mini Kernel course page</a> uses the repository's tiny OS as learning material. It explains the boot binaries, the stage2 monitor, and the new syscall-like dispatcher used by the tiny kernel.</p>
 
         <h3>Beginner To Expert Roadmap</h3>
         <p>The first nine parts are the hands-on core. A complete isolation engineer needs more than that, so the course is organized as a roadmap from fundamentals to production-grade runtime design.</p>

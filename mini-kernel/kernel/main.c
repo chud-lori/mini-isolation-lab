@@ -2,6 +2,7 @@
 #include <kernel/log.h>
 #include <kernel/mem.h>
 #include <kernel/string.h>
+#include <kernel/syscall.h>
 
 static char banner_buffer[64];
 
@@ -45,9 +46,25 @@ void kernel_start(void)
         arch_halt();
     }
 
-    klog_writeln(banner_buffer);
-    klog_writeln("serial online; entering secure halt loop");
+    struct ktask init_task = {
+        .pid = 1,
+        .user_base = (uintptr_t)banner_buffer,
+        .user_len = kstrlen(banner_buffer),
+    };
+    struct ksyscall_regs write_banner = {
+        .nr = KSYSCALL_WRITE,
+        .arg0 = KSYSCALL_FD_STDOUT,
+        .arg1 = (uintptr_t)banner_buffer,
+        .arg2 = kstrlen(banner_buffer),
+    };
+    struct ksyscall_result write_result = ksyscall_dispatch(&init_task, &write_banner);
+    if (write_result.error != KSYSCALL_OK) {
+        klog_writeln("sys_write failed");
+        arch_halt();
+    }
+
+    klog_putc('\n');
+    klog_writeln("syscall dispatcher online; entering secure halt loop");
 
     arch_halt();
 }
-

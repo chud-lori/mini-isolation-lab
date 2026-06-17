@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+void test_syscalls(void);
+void test_fs(void);
+
 static void test_strlen(void)
 {
     assert(kstrlen(NULL) == 0);
@@ -55,6 +58,8 @@ int main(void)
     test_mem_equal();
     test_memset_and_copy();
     test_checked_copy();
+    test_fs();
+    test_syscalls();
     puts("kernel lib tests passed");
     return 0;
 }

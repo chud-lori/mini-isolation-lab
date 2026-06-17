@@ -104,9 +104,8 @@ or add your user to the `kvm` group.
 
 The `/kernel/` page explains the `mini-kernel/` project as operating-system
 learning material: what the boot sector binary does, why stage2 exists, how the
-freestanding kernel is organized, why the first implementation uses C and
-assembly instead of Rust or Zig, and how the project can grow toward a small
-POSIX-compatible syscall and libc surface.
+freestanding kernel is organized, and how the tiny syscall-like dispatcher is
+implemented and tested.
 
 Build the kernel lab locally:
 

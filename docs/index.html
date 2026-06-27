@@ -16,7 +16,7 @@
       </div>
       <div class="nav-label">Course Index</div>
       <nav aria-label="Course parts"><ol class="course-nav">
-<li><a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel</span></a><ul class="subparts"><li>boot sector</li><li>stage2 monitor</li><li>syscall dispatcher</li></ul></li>
+<li><a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel</span></a><ul class="subparts"><li>boot/stage2</li><li>filesystem/userspace</li><li>GDT/IDT tables</li></ul></li>
 <li><a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
 <li><a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
 <li><a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
@@ -26,6 +26,11 @@
 <li><a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
 <li><a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
 <li><a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
+<li><a href="parts/part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory</span></a><ul class="subparts"><li>memory slots</li><li>capability check</li><li>guest physical map</li></ul></li>
+<li><a href="parts/part-11-hardening.html"><span class="num">11</span><span>Container Hardening</span></a><ul class="subparts"><li>no_new_privs</li><li>seccomp strict</li><li>status inspection</li></ul></li>
+<li><a href="parts/part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping</span></a><ul class="subparts"><li>CLONE_NEWUSER</li><li>uid_map and gid_map</li><li>root inside namespace</li></ul></li>
+<li><a href="parts/part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities</span></a><ul class="subparts"><li>microVM baseline</li><li>memory and irq caps</li><li>virtio eventfds</li></ul></li>
+<li><a href="parts/part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping</span></a><ul class="subparts"><li>capget/capset</li><li>CapEff inspection</li><li>raw socket check</li></ul></li>
 </ol></nav>
     </aside>
 
@@ -34,17 +39,17 @@
         <div class="article">
           <div class="part-label">systems course</div>
           <h2>Mini Isolation Lab</h2>
-          <p>This is a step-by-step course for engineers who want to understand containerization and Firecracker-style microVMs from first principles. The course starts with syscalls and memory, then builds toward namespaces, cgroups, a small container runtime, KVM, and a tiny VMM event loop.</p>
+          <p>This is a step-by-step course for engineers who want to understand containerization and Firecracker-style microVMs from first principles. The site covers the repository's current fourteen Linux demo lessons, then adds a Mini Kernel companion for boot and kernel-boundary concepts.</p>
         </div>
       </header>
 
       <article class="article">
         <h3>How To Use This Course</h3>
-        <p>Read the parts in order. Each lesson has its own page, source file, run commands, expected output, and checkpoints. The early parts are intentionally small because they introduce the kernel ideas used by the later runtimes.</p>
-        <p>The container side teaches how Linux isolates host processes with namespaces, root filesystems, and cgroups. The microVM side teaches how a host process uses KVM to run guest code behind a stronger VM boundary.</p>
+        <p>Read the parts in order. Each lesson has its own page, source file, run commands, observable checkpoints, and notes about what the demo proves. The early parts are intentionally small because they introduce the kernel ideas used by the later runtimes.</p>
+        <p>The container side teaches how Linux isolates host processes with namespaces, root filesystems, and cgroups. The microVM side teaches how a host process uses KVM to run guest code behind a stronger VM boundary. The Mini Kernel side is separate: it shows what the machine looks like before Linux has created processes at all.</p>
 
         <div class="lesson-list">
-<a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel: boot and syscall layer</span><span>new</span></a>
+<a href="kernel/index.html"><span class="num">K0</span><span>Mini Kernel: boot, syscalls, and descriptor tables</span><span>new</span></a>
 <a href="parts/part-01-syscalls.html"><span class="num">01</span><span>Syscalls: Kernel boundary</span><span>start</span></a>
 <a href="parts/part-02-memory.html"><span class="num">02</span><span>Memory: malloc, mmap, pages</span><span>read</span></a>
 <a href="parts/part-03-processes.html"><span class="num">03</span><span>Processes: clone and waitpid</span><span>read</span></a>
@@ -54,13 +59,18 @@
 <a href="parts/part-07-container.html"><span class="num">07</span><span>Mini Container: combine primitives</span><span>build</span></a>
 <a href="parts/part-08-kvm.html"><span class="num">08</span><span>KVM API: /dev/kvm ioctl</span><span>read</span></a>
 <a href="parts/part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker: VMM event loop</span><span>build</span></a>
+<a href="parts/part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory: KVM slots</span><span>build</span></a>
+<a href="parts/part-11-hardening.html"><span class="num">11</span><span>Container Hardening: no_new_privs and seccomp</span><span>harden</span></a>
+<a href="parts/part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping: root inside, user outside</span><span>map</span></a>
+<a href="parts/part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities: microVM host contract</span><span>check</span></a>
+<a href="parts/part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping: least privilege process state</span><span>drop</span></a>
         </div>
 
         <h3>Kernel Companion</h3>
-        <p>The new <a href="kernel/index.html">Mini Kernel course page</a> uses the repository's tiny OS as learning material. It explains the boot binaries, the stage2 monitor, and the new syscall-like dispatcher used by the tiny kernel.</p>
+        <p>The <a href="kernel/index.html">Mini Kernel workbench</a> and <a href="kernel/course/">Mini Kernel course</a> use the repository's tiny OS as learning material. Its working bootable path is a raw BIOS image: a 512-byte boot sector loads a stage2 text monitor. The freestanding C kernel, syscall dispatcher, read-only filesystem, userspace-shaped init path, and early x86_64 GDT/IDT setup are compiled and host-tested, while the Limine/Multiboot bootloader path is planned scaffolding.</p>
 
         <h3>Beginner To Expert Roadmap</h3>
-        <p>The first nine parts are the hands-on core. A complete isolation engineer needs more than that, so the course is organized as a roadmap from fundamentals to production-grade runtime design.</p>
+        <p>The first fourteen Linux parts are the hands-on core. A complete isolation engineer needs more than that, so the course is organized as a roadmap from fundamentals to production-grade runtime design.</p>
 
         <h4>Module A: Beginner Foundations</h4>
         <ul>
@@ -97,18 +107,18 @@
           <li>Operational lifecycle: create, start, stop, reap, delete, recover.</li>
         </ul>
 
-        <h4>Module E: Expert Projects</h4>
+        <h4>Module E: What To Build Next</h4>
         <ul>
           <li>Replace `chroot` with `pivot_root` in the mini-container.</li>
-          <li>Add user namespace mapping and drop capabilities.</li>
           <li>Add a veth pair and basic NAT networking.</li>
           <li>Boot a real Linux kernel in the mini-Firecracker path.</li>
           <li>Implement a tiny Unix-socket control API inspired by Firecracker.</li>
           <li>Add a minimal virtio-mmio device and compare it with the fake port device.</li>
+          <li>For Mini Kernel, link the C kernel into the BIOS stage2 handoff or make the planned Limine/Multiboot path the explicit bootloader route.</li>
         </ul>
 
         <h3>Run The Code</h3>
-        <p>The demos are Linux-only. macOS does not expose Linux namespaces, cgroups, or KVM.</p>
+        <p>The demos are Linux-only. macOS does not expose Linux namespaces, cgroups, KVM, or Linux capabilities. `make` builds the combined container and microVM demos; `make parts` builds all numbered lesson binaries, including aliases for those combined demos.</p>
         <pre><code>sudo apt-get install build-essential busybox-static
 make
 make parts</code></pre>
@@ -116,13 +126,28 @@ make parts</code></pre>
         <h3>Repository Layout</h3>
         <pre><code>docs/
   index.html
+  kernel/
+    index.html
+    course/
   parts/
     part-01-syscalls.html
     ...
 src/
   part-01-syscalls/syscall_write.c
   ...
-  part-09-microvm/mini_firecracker.c</code></pre>
+  part-07-container/mini_container.c
+  part-09-microvm/mini_firecracker.c
+  part-10-microvm-memory/kvm_memory_slots.c
+  part-11-hardening/container_hardening.c
+  part-12-userns/userns_map.c
+  part-13-kvm-capabilities/kvm_capabilities.c
+  part-14-capabilities/drop_capabilities.c
+mini-kernel/
+  kernel/fs.c
+  kernel/user.c
+  kernel/arch/x86_64/gdt.c
+  kernel/arch/x86_64/idt.c
+  tests/test_arch.c</code></pre>
       </article>
     </main>
   </div>

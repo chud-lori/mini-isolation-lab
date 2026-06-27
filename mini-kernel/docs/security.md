@@ -6,10 +6,13 @@ real isolation features as the kernel grows.
 
 ## Baseline Assumptions
 
-- The bootloader and firmware are trusted for early development.
-- Limine structures are treated as external input and checked before use.
+- Firmware and the raw BIOS stage2 path are trusted for early development.
+- Future bootloader-provided structures, including Limine or Multiboot data,
+  must be treated as external input and checked before use.
 - There is no confidentiality boundary until user mode, process address spaces,
   and syscall validation exist.
+- GDT and IDT descriptor bytes are host-tested before early x86_64 setup loads
+  them with narrow `lgdt` and `lidt` helpers.
 - QEMU is the primary test environment; hardware behavior may differ.
 
 ## Early Protections
@@ -18,7 +21,8 @@ real isolation features as the kernel grows.
   diagnostics when practical.
 - Disable the x86_64 red zone for kernel code.
 - Keep stack setup explicit and avoid large stack allocations.
-- Install an IDT early so faults are diagnosed instead of triple-faulting.
+- Install an IDT early, then add real handlers so faults are diagnosed instead
+  of triple-faulting.
 - Validate memory map ranges for overflow, alignment, and overlap with reserved
   kernel regions.
 - Keep writable and executable mappings separate where paging setup allows it.

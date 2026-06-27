@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 14: Capability Dropping - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol class="course-nav">
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a><ul class="subparts"><li>UTS namespace</li><li>isolated hostname</li><li>namespace mental model</li></ul></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a><ul class="subparts"><li>chroot path lookup</li><li>BusyBox rootfs</li><li>rootfs limitations</li></ul></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a><ul class="subparts"><li>cgroup v2 files</li><li>memory.max and pids.max</li><li>resource isolation</li></ul></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
+<li><a href="part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory</span></a><ul class="subparts"><li>memory slots</li><li>capability check</li><li>guest physical map</li></ul></li>
+<li><a href="part-11-hardening.html"><span class="num">11</span><span>Container Hardening</span></a><ul class="subparts"><li>no_new_privs</li><li>seccomp strict</li><li>status inspection</li></ul></li>
+<li><a href="part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping</span></a><ul class="subparts"><li>CLONE_NEWUSER</li><li>uid_map and gid_map</li><li>root inside namespace</li></ul></li>
+<li><a href="part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities</span></a><ul class="subparts"><li>microVM baseline</li><li>memory and irq caps</li><li>virtio eventfds</li></ul></li>
+<li><a class="active" href="part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping</span></a><ul class="subparts"><li>capget/capset</li><li>CapEff inspection</li><li>raw socket check</li></ul></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 14</div><h2>Capability Dropping: Least Privilege In One Process</h2><details class="source-panel"><summary>Show source: src/part-14-capabilities/drop_capabilities.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "drop_capabilities.c requires Linux capability syscalls."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;linux/capability.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;sys/syscall.h&gt;
+#include &lt;unistd.h&gt;
+
+static void die(const char *msg) {
+    perror(msg);
+    exit(EXIT_FAILURE);
+}
+
+static void print_status_field(const char *label, const char *field) {
+    FILE *status = fopen("/proc/self/status", "r");
+    if (!status) {
+        fprintf(stderr, "%s: could not open /proc/self/status: %s\n",
+                label,
+                strerror(errno));
+        return;
+    }
+
+    char *line = NULL;
+    size_t cap = 0;
+    size_t field_len = strlen(field);
+    while (getline(&amp;line, &amp;cap, status) &gt; 0) {
+        if (strncmp(line, field, field_len) == 0) {
+            printf("%s: %s", label, line);
+            break;
+        }
+    }
+
+    free(line);
+    fclose(status);
+}
+
+static void print_cap_snapshot(const char *label) {
+    print_status_field(label, "Uid:");
+    print_status_field(label, "CapInh:");
+    print_status_field(label, "CapPrm:");
+    print_status_field(label, "CapEff:");
+    print_status_field(label, "CapBnd:");
+}
+
+static void get_caps(struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3]) {
+    struct __user_cap_header_struct header;
+    memset(&amp;header, 0, sizeof(header));
+    header.version = _LINUX_CAPABILITY_VERSION_3;
+    header.pid = 0;
+
+    memset(data, 0, sizeof(struct __user_cap_data_struct) * _LINUX_CAPABILITY_U32S_3);
+    if (syscall(SYS_capget, &amp;header, data) &lt; 0) {
+        die("capget");
+    }
+}
+
+static void drop_process_caps(void) {
+    struct __user_cap_header_struct header;
+    struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+
+    memset(&amp;header, 0, sizeof(header));
+    header.version = _LINUX_CAPABILITY_VERSION_3;
+    header.pid = 0;
+
+    memset(data, 0, sizeof(data));
+    if (syscall(SYS_capset, &amp;header, data) &lt; 0) {
+        die("capset");
+    }
+}
+
+static unsigned long long effective_caps_to_u64(
+    const struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3]) {
+    return ((unsigned long long)data[1].effective &lt;&lt; 32) | data[0].effective;
+}
+
+static void try_raw_socket(const char *label) {
+    int fd = socket(AF_INET, SOCK_RAW | SOCK_CLOEXEC, IPPROTO_ICMP);
+    if (fd &gt;= 0) {
+        printf("%s: raw ICMP socket opened (CAP_NET_RAW was effective)\n", label);
+        close(fd);
+        return;
+    }
+
+    if (errno == EPERM || errno == EACCES) {
+        printf("%s: raw ICMP socket denied: %s\n", label, strerror(errno));
+        return;
+    }
+
+    printf("%s: raw ICMP socket failed for another reason: %s\n",
+           label,
+           strerror(errno));
+}
+
+int main(void) {
+    struct __user_cap_data_struct before[_LINUX_CAPABILITY_U32S_3];
+    struct __user_cap_data_struct after[_LINUX_CAPABILITY_U32S_3];
+
+    printf("capability demo: drop effective/permitted/inheritable sets\n");
+    print_cap_snapshot("before");
+    get_caps(before);
+    try_raw_socket("before drop");
+
+    drop_process_caps();
+
+    print_cap_snapshot("after");
+    get_caps(after);
+    try_raw_socket("after drop");
+
+    unsigned long long effective_after = effective_caps_to_u64(after);
+    if (effective_after != 0) {
+        fprintf(stderr,
+                "expected zero effective capabilities after capset, got 0x%llx\n",
+                effective_after);
+        return EXIT_FAILURE;
+    }
+
+    if (before[0].effective == 0 &amp;&amp; before[1].effective == 0) {
+        printf("note: this process already started without effective capabilities; "
+               "the capset call still proves the drop path is available.\n");
+    } else {
+        printf("capability drop succeeded: effective capability set is now zero\n");
+    }
+
+    return EXIT_SUCCESS;
+}
+</code></pre></details>
+<p>Namespaces can make a process look isolated, but capabilities decide which privileged kernel operations that process can still perform. This lesson drops the current process's effective, permitted, and inheritable capability sets with the raw `capset` syscall.</p>
+<p>The demo reads `/proc/self/status` before and after the drop, then tries to open a raw ICMP socket. Raw sockets require `CAP_NET_RAW`, so the check gives a concrete least-privilege signal instead of only printing bitmasks.</p>
+<h3>Why Capabilities Matter</h3><p>Traditional Unix root is all-or-nothing. Linux capabilities split root privileges into smaller bits such as `CAP_NET_ADMIN`, `CAP_SYS_ADMIN`, and `CAP_NET_RAW`. Container runtimes use this to remove privileges that the workload does not need.</p>
+<p>The important lesson is ordering: drop capabilities after setup work that requires them, and before running untrusted application code. Dropping from the permitted set means the process cannot simply make the capability effective again later.</p>
+<h3>What The Demo Drops</h3><p>The source calls `capget` to inspect the current capability words, then calls `capset` with all zeroes. That clears the inheritable, permitted, and effective sets for the current process.</p>
+<pre><code class="language-c">struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+memset(data, 0, sizeof(data));
+syscall(SYS_capset, &header, data);</code></pre>
+<p>The bounding set shown as `CapBnd` is intentionally not changed here. It is a separate limit on what a process tree can regain across exec, and production runtimes usually combine capability set changes with bounding-set drops, seccomp, user namespaces, and LSM policy.</p>
+<h3>Run It</h3><pre><code class="language-bash">make part-14-capabilities
+./part-14-capabilities</code></pre>
+<p>Expected shape of the output:</p><pre><code class="language-text">capability demo: drop effective/permitted/inheritable sets
+before: CapEff:  0000000000000000
+before drop: raw ICMP socket denied: Operation not permitted
+after: CapEff:   0000000000000000
+after drop: raw ICMP socket denied: Operation not permitted
+note: this process already started without effective capabilities; the capset call still proves the drop path is available.</code></pre>
+<p>If you run as a privileged user or inside a container that grants `CAP_NET_RAW`, the first raw socket attempt may succeed and the second should fail after the drop.</p>
+<h3>How This Connects To Containers</h3><p>Part 11 showed `no_new_privs` and seccomp. Part 12 showed user namespace mapping. Capability dropping is the next hardening layer: the container process can keep the narrow privileges needed to start, then discard the ones the workload should never use.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain the difference between namespace identity, effective capabilities, permitted capabilities, and why dropping from the permitted set is stronger than only clearing the effective set.</p></div>
+<div class="next-prev"><a href="part-13-kvm-capabilities.html">Previous: KVM Capabilities</a><a href="../index.html">Back to index</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

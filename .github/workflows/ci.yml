@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux-demos-and-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install demo dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential busybox-static
+      - name: Build Linux lesson demos
+        run: make parts
+      - name: Build BusyBox rootfs
+        run: make rootfs
+      - name: Check docs source references
+        run: make check-docs
+
+  mini-kernel-host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kernel test dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang lld llvm
+      - name: Build and check mini-kernel
+        working-directory: mini-kernel
+        run: make all
+      - name: Link mini-kernel ELF scaffold
+        working-directory: mini-kernel
+        run: make build/mini-kernel.elf

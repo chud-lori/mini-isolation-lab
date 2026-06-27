@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 13: KVM Capabilities - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol class="course-nav">
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a><ul class="subparts"><li>UTS namespace</li><li>isolated hostname</li><li>namespace mental model</li></ul></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a><ul class="subparts"><li>chroot path lookup</li><li>BusyBox rootfs</li><li>rootfs limitations</li></ul></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a><ul class="subparts"><li>cgroup v2 files</li><li>memory.max and pids.max</li><li>resource isolation</li></ul></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
+<li><a href="part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory</span></a><ul class="subparts"><li>memory slots</li><li>capability check</li><li>guest physical map</li></ul></li>
+<li><a href="part-11-hardening.html"><span class="num">11</span><span>Container Hardening</span></a><ul class="subparts"><li>no_new_privs</li><li>seccomp strict</li><li>status inspection</li></ul></li>
+<li><a href="part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping</span></a><ul class="subparts"><li>CLONE_NEWUSER</li><li>uid_map and gid_map</li><li>root inside namespace</li></ul></li>
+<li><a class="active" href="part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities</span></a><ul class="subparts"><li>microVM baseline</li><li>memory and irq caps</li><li>virtio eventfds</li></ul></li>
+<li><a href="part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping</span></a><ul class="subparts"><li>capget/capset</li><li>CapEff inspection</li><li>raw socket check</li></ul></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 13</div><h2>KVM Capabilities: Checking The VMM Contract</h2><details class="source-panel"><summary>Show source: src/part-13-kvm-capabilities/kvm_capabilities.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "kvm_capabilities.c requires Linux KVM; build and run it on Linux."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;linux/kvm.h&gt;
+#include &lt;stdbool.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/ioctl.h&gt;
+#include &lt;unistd.h&gt;
+
+enum cap_kind {
+    CAP_BOOLEAN,
+    CAP_COUNT,
+};
+
+static void explain_open_kvm_error(int err) {
+    fprintf(stderr, "open /dev/kvm: %s\n", strerror(err));
+    if (err == ENOENT || err == ENODEV) {
+        fprintf(stderr,
+                "hint: /dev/kvm is missing. Enable KVM virtualization in the "
+                "host kernel/firmware, load the kvm module, or run this on a "
+                "Linux host with hardware virtualization.\n");
+    } else if (err == EACCES || err == EPERM) {
+        fprintf(stderr,
+                "hint: permission denied. Add your user to the kvm group, fix "
+                "/dev/kvm permissions, or run with sudo for this demo.\n");
+    }
+}
+
+static int open_kvm_device(void) {
+    int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+    if (kvm_fd &lt; 0) {
+        explain_open_kvm_error(errno);
+        exit(EXIT_FAILURE);
+    }
+    return kvm_fd;
+}
+
+static int checked_ioctl(int fd,
+                         unsigned long request,
+                         unsigned long arg,
+                         const char *name) {
+    int ret = ioctl(fd, request, arg);
+    if (ret &lt; 0) {
+        fprintf(stderr, "%s: %s\n", name, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return ret;
+}
+
+static int check_capability(int kvm_fd,
+                            int capability,
+                            const char *name,
+                            enum cap_kind kind,
+                            bool required,
+                            const char *why) {
+    int value = checked_ioctl(kvm_fd,
+                              KVM_CHECK_EXTENSION,
+                              (unsigned long)capability,
+                              "KVM_CHECK_EXTENSION");
+
+    if (kind == CAP_COUNT) {
+        printf("%-24s value=%d", name, value);
+    } else {
+        printf("%-24s %s", name, value &gt; 0 ? "yes" : "no");
+        if (value &gt; 1) {
+            printf(" (value=%d)", value);
+        }
+    }
+
+    printf(" - %s", why);
+    if (required &amp;&amp; value &lt;= 0) {
+        printf(" [required for this path]");
+    }
+    putchar('\n');
+
+    return value;
+}
+
+static void print_missing_header_cap(const char *name, const char *why) {
+    printf("%-24s header-missing - %s\n", name, why);
+}
+
+int main(void) {
+    int kvm_fd = open_kvm_device();
+
+    int api_version = checked_ioctl(kvm_fd,
+                                    KVM_GET_API_VERSION,
+                                    0,
+                                    "KVM_GET_API_VERSION");
+    printf("KVM API version: %d\n", api_version);
+    printf("expected by headers: %d\n\n", KVM_API_VERSION);
+    if (api_version != KVM_API_VERSION) {
+        fprintf(stderr,
+                "KVM API mismatch: kernel returned %d but these headers expect %d.\n",
+                api_version,
+                KVM_API_VERSION);
+        close(kvm_fd);
+        return EXIT_FAILURE;
+    }
+
+    bool ready = true;
+    printf("microVM/VMM capability checklist:\n");
+
+#ifdef KVM_CAP_USER_MEMORY
+    int user_memory = check_capability(
+        kvm_fd,
+        KVM_CAP_USER_MEMORY,
+        "KVM_CAP_USER_MEMORY",
+        CAP_BOOLEAN,
+        true,
+        "userspace-backed guest RAM via KVM_SET_USER_MEMORY_REGION");
+    ready = ready &amp;&amp; user_memory &gt; 0;
+#else
+    print_missing_header_cap("KVM_CAP_USER_MEMORY",
+                             "old headers cannot name userspace memory support");
+    ready = false;
+#endif
+
+#ifdef KVM_CAP_NR_MEMSLOTS
+    int memslots = check_capability(
+        kvm_fd,
+        KVM_CAP_NR_MEMSLOTS,
+        "KVM_CAP_NR_MEMSLOTS",
+        CAP_COUNT,
+        true,
+        "maximum memory regions the VMM can register");
+    ready = ready &amp;&amp; memslots &gt; 0;
+#else
+    print_missing_header_cap("KVM_CAP_NR_MEMSLOTS",
+                             "old headers cannot ask for the memory-slot count");
+    ready = false;
+#endif
+
+#ifdef KVM_CAP_IRQCHIP
+    check_capability(kvm_fd,
+                     KVM_CAP_IRQCHIP,
+                     "KVM_CAP_IRQCHIP",
+                     CAP_BOOLEAN,
+                     false,
+                     "in-kernel interrupt controller support");
+#else
+    print_missing_header_cap("KVM_CAP_IRQCHIP",
+                             "headers do not expose the irqchip capability");
+#endif
+
+#ifdef KVM_CAP_IOEVENTFD
+    check_capability(kvm_fd,
+                     KVM_CAP_IOEVENTFD,
+                     "KVM_CAP_IOEVENTFD",
+                     CAP_BOOLEAN,
+                     false,
+                     "eventfd notification path used by virtio-style devices");
+#else
+    print_missing_header_cap("KVM_CAP_IOEVENTFD",
+                             "headers do not expose ioeventfd capability");
+#endif
+
+#ifdef KVM_CAP_IRQFD
+    check_capability(kvm_fd,
+                     KVM_CAP_IRQFD,
+                     "KVM_CAP_IRQFD",
+                     CAP_BOOLEAN,
+                     false,
+                     "eventfd-based interrupt injection used by VMM devices");
+#else
+    print_missing_header_cap("KVM_CAP_IRQFD",
+                             "headers do not expose irqfd capability");
+#endif
+
+#ifdef KVM_CAP_MP_STATE
+    check_capability(kvm_fd,
+                     KVM_CAP_MP_STATE,
+                     "KVM_CAP_MP_STATE",
+                     CAP_BOOLEAN,
+                     false,
+                     "read/write vCPU multiprocessing state when supported");
+#else
+    print_missing_header_cap("KVM_CAP_MP_STATE",
+                             "headers do not expose vCPU MP state capability");
+#endif
+
+    putchar('\n');
+    if (ready) {
+        printf("baseline result: this host exposes the core KVM pieces needed "
+               "to map guest RAM for a tiny VMM.\n");
+    } else {
+        printf("baseline result: missing a core capability for the tiny VMM "
+               "memory path checked by this lesson.\n");
+    }
+
+    close(kvm_fd);
+    return ready ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+</code></pre></details>
+<p>Parts 08-10 showed the mechanics of opening `/dev/kvm`, mapping guest RAM, and running a tiny vCPU. A real VMM also needs to ask the host kernel which KVM extensions are present before it commits to a VM layout or device model.</p>
+<p>This lesson is a Linux-only capability checklist for a microVM path. It does not create a VM. It opens `/dev/kvm`, verifies the API version, and then reports the KVM extensions that matter for guest memory and virtio-adjacent interrupt/event delivery.</p>
+<h3>Why Capabilities Matter</h3><p>`KVM_CHECK_EXTENSION` is how userspace discovers optional KVM features. Some values are booleans. Others return a count or limit. For example, `KVM_CAP_NR_MEMSLOTS` reports how many guest memory regions the VMM can register.</p>
+<pre><code class="language-c">int value = ioctl(kvm_fd, KVM_CHECK_EXTENSION, KVM_CAP_NR_MEMSLOTS);</code></pre>
+<p>The demo treats userspace memory and a positive memory-slot count as the baseline for this course's tiny VMM path. It prints other capabilities as useful context because different architectures and kernel versions expose different device-model helpers.</p>
+<h3>The Virtio-Adjacent Pieces</h3><p>`KVM_CAP_IOEVENTFD` and `KVM_CAP_IRQFD` are not virtio devices by themselves. They are kernel acceleration hooks that many VMMs use around virtio-style devices: one eventfd can notify userspace when the guest writes a device doorbell, and another can inject an interrupt back into the guest.</p>
+<p>`KVM_CAP_IRQCHIP` and `KVM_CAP_MP_STATE` round out common VMM checks. IRQ chip support affects interrupt-controller setup, while MP state support lets userspace inspect or set vCPU lifecycle state when the headers and host expose it.</p>
+<h3>Header Compatibility</h3><p>The source uses `#ifdef` around optional capability macros. That means the lesson still compiles with older Linux headers that do not define every capability name; missing macros are reported as `header-missing` at runtime instead of breaking the build.</p>
+<h3>Run It</h3><pre><code class="language-bash">make part-13-kvm-capabilities
+./part-13-kvm-capabilities</code></pre>
+<p>Expected shape of the output:</p><pre><code class="language-text">KVM API version: 12
+expected by headers: 12
+
+microVM/VMM capability checklist:
+KVM_CAP_USER_MEMORY    yes - userspace-backed guest RAM via KVM_SET_USER_MEMORY_REGION
+KVM_CAP_NR_MEMSLOTS    value=509 - maximum memory regions the VMM can register
+KVM_CAP_IRQCHIP        yes - in-kernel interrupt controller support
+KVM_CAP_IOEVENTFD      yes - eventfd notification path used by virtio-style devices
+KVM_CAP_IRQFD          yes - eventfd-based interrupt injection used by VMM devices
+KVM_CAP_MP_STATE       yes - read/write vCPU multiprocessing state when supported
+
+baseline result: this host exposes the core KVM pieces needed to map guest RAM for a tiny VMM.</code></pre>
+<p>On some valid hosts, optional capabilities may print `no` or `header-missing`. That does not necessarily mean KVM is unusable; it means a production VMM must choose a different setup path or disable features that depend on that extension.</p>
+<h3>How This Connects To MicroVMs</h3><p>Firecracker-style VMMs keep the device model small. Capability probing is part of that discipline: the VMM can fail early when a required primitive is absent and can avoid enabling guest-visible devices that the host cannot support efficiently.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain why `KVM_CAP_USER_MEMORY` and `KVM_CAP_NR_MEMSLOTS` are baseline memory requirements, and why `ioeventfd` plus `irqfd` are useful around virtio-style devices.</p></div>
+<div class="next-prev"><a href="part-12-userns.html">Previous: User Namespace Mapping</a><a href="part-14-capabilities.html">Next: Capability Dropping</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>

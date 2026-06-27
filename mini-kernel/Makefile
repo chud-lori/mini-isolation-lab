@@ -30,6 +30,8 @@ KERNEL_SRCS := \
 	kernel/lib/mem.c \
 	kernel/lib/string.c \
 	kernel/security/assert.c \
+	kernel/arch/x86_64/gdt.c \
+	kernel/arch/x86_64/idt.c \
 	kernel/arch/x86_64/cpu.c \
 	kernel/arch/x86_64/serial.c
 
@@ -41,13 +43,16 @@ HOST_TEST_SRCS := \
 	tests/test_syscall_entry.c \
 	tests/test_user.c \
 	tests/test_fs.c \
+	tests/test_arch.c \
 	kernel/syscall.c \
 	kernel/syscall_entry.c \
 	kernel/user.c \
 	kernel/fs.c \
 	kernel/lib/mem.c \
 	kernel/lib/string.c \
-	kernel/security/assert.c
+	kernel/security/assert.c \
+	kernel/arch/x86_64/gdt.c \
+	kernel/arch/x86_64/idt.c
 
 .PHONY: all check clean image kernel-objects run run-bootsector run-image toolchain \
 	validate-bootsector validate-stage2

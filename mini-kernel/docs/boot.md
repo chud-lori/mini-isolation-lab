@@ -1,9 +1,12 @@
 # Boot And Run
 
-The intended full path is a freestanding x86_64 kernel loaded by a bootloader
-and tested in QEMU. The current no-network path also builds a raw BIOS disk
-image before an ELF linker is installed. That image uses a 512-byte boot sector
-at LBA 0 and a second-stage monitor at LBA 1 and above.
+The working boot path today is a raw BIOS disk image tested in QEMU. It uses a
+512-byte boot sector at LBA 0 and a second-stage monitor at LBA 1 and above.
+
+The intended full kernel path is separate: a freestanding x86_64 ELF kernel
+loaded by a bootloader such as Limine or another Multiboot2-compatible loader.
+The repo has the early pieces for that path, but the runnable no-network image
+currently boots to the stage2 monitor, not into the C kernel.
 
 ## Optional Tools
 
@@ -12,8 +15,8 @@ at LBA 0 and a second-stage monitor at LBA 1 and above.
 - `limine`: bootloader files and ISO image helpers.
 - `xorriso`: commonly used when producing BIOS/UEFI bootable ISO images.
 
-The local machine currently has Homebrew LLVM's `llvm-objcopy`, so `make all`
-can build and validate the raw image without network downloads.
+`llvm-objcopy` is enough for the raw BIOS image. A full bootloader-backed kernel
+run also needs an ELF linker and emulator.
 
 ## Current No-Network Flow
 
@@ -28,7 +31,7 @@ objects. The image can be run later with:
 make run-image
 ```
 
-That target requires `qemu-system-x86_64`.
+That target requires `qemu-system-x86_64` and starts the stage2 monitor.
 
 ## Raw BIOS Image Path
 
@@ -41,7 +44,8 @@ LBA 1..n   stage2 binary, padded to 512-byte sectors
 
 The boot sector preserves the BIOS drive number, reads the padded stage2 from
 sector 2 using BIOS `int 13h`, and jumps to `0800:0000`. Stage2 sets its own
-segment state and provides a tiny monitor.
+segment state and provides a tiny monitor with `help`, `about`, `clear`, `halt`,
+and `reboot`.
 
 Build the image with:
 
@@ -56,9 +60,11 @@ make run-image
 ```
 
 Keep the boot sector small. Put protected-mode or long-mode setup in stage2
-unless there is a strong reason not to.
+unless there is a strong reason not to. Do not treat this raw image as the final
+kernel boot ABI; it is a practical monitor path while the bootloader-backed
+kernel path matures.
 
-## Expected Kernel Build Flow
+## Future Bootloader-Backed Kernel Flow
 
 1. Compile C or Rust kernel objects for a freestanding x86_64 target.
 2. Link the kernel with a linker script into an ELF64 image.
@@ -78,14 +84,14 @@ For Rust builds, use a custom target or a known bare-metal x86_64 target with:
 panic = "abort"
 ```
 
-The linker should set the Limine entry point and place kernel sections at the
-virtual and physical addresses expected by the boot protocol.
+The linker should set the boot protocol entry point and place kernel sections at
+the virtual and physical addresses expected by that protocol.
 
 ## Limine Configuration
 
 A minimal `limine.conf` normally names the kernel path and protocol. This repo
-currently uses a Multiboot2-compatible entry while keeping the file easy to
-adapt for Limine-native boot later:
+currently keeps a Multiboot2-compatible example while leaving room to adapt to a
+Limine-native protocol later:
 
 ```text
 TIMEOUT=0
@@ -100,7 +106,7 @@ options are needed.
 
 ## QEMU Smoke Test
 
-Once an image exists, a basic run command is:
+For the raw BIOS image, a basic run command is:
 
 ```sh
 qemu-system-x86_64 -drive format=raw,file=build/mini-kernel.img -serial stdio
@@ -112,8 +118,10 @@ Useful additions while debugging:
 -no-reboot -no-shutdown -d int
 ```
 
-If the kernel writes to a framebuffer instead of serial, keep serial logging
-available for faults and CI smoke tests.
+For a future bootloader-backed kernel, `make run` uses `qemu-system-x86_64
+-kernel build/mini-kernel.elf` after the ELF is linked. If the kernel writes to a
+framebuffer instead of serial, keep serial logging available for faults and CI
+smoke tests.
 
 ## Troubleshooting
 

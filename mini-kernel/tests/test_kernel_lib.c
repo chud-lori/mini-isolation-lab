@@ -9,6 +9,7 @@ void test_syscalls(void);
 void test_user_runtime(void);
 void test_syscall_entry(void);
 void test_fs(void);
+void test_arch(void);
 
 static void test_strlen(void)
 {
@@ -61,10 +62,10 @@ int main(void)
     test_memset_and_copy();
     test_checked_copy();
     test_fs();
+    test_arch();
     test_syscalls();
     test_syscall_entry();
     test_user_runtime();
     puts("kernel lib tests passed");
     return 0;
 }
-

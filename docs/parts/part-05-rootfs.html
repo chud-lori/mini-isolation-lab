@@ -11,6 +11,11 @@
 <li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
 <li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
 <li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
+<li><a href="part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory</span></a><ul class="subparts"><li>memory slots</li><li>capability check</li><li>guest physical map</li></ul></li>
+<li><a href="part-11-hardening.html"><span class="num">11</span><span>Container Hardening</span></a><ul class="subparts"><li>no_new_privs</li><li>seccomp strict</li><li>status inspection</li></ul></li>
+<li><a href="part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping</span></a><ul class="subparts"><li>CLONE_NEWUSER</li><li>uid_map and gid_map</li><li>root inside namespace</li></ul></li>
+<li><a href="part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities</span></a><ul class="subparts"><li>microVM baseline</li><li>memory and irq caps</li><li>virtio eventfds</li></ul></li>
+<li><a href="part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping</span></a><ul class="subparts"><li>capget/capset</li><li>CapEff inspection</li><li>raw socket check</li></ul></li>
 </ol></nav></aside><main><article class="article">
 <div class="part-label">Part 05</div><h2>Root Filesystem: What `/` Means</h2><details class="source-panel"><summary>Show source: src/part-05-rootfs/chroot_exec.c</summary><pre><code class="language-c">#define _GNU_SOURCE
 
@@ -59,9 +64,7 @@ container rootfs /
 chdir("/");
 execvp(argv[2], &argv[2]);</code></pre>
 <h3>Run It</h3><pre><code class="language-bash">make part-05-rootfs
-mkdir -p rootfs/bin
-cp /bin/busybox rootfs/bin/
-ln -s busybox rootfs/bin/sh
+make rootfs
 sudo ./part-05-rootfs ./rootfs /bin/sh</code></pre>
 <p>Inside the shell, try `pwd`, `ls /`, and `echo hello`. Many normal commands will be missing unless your rootfs contains them. That is expected.</p>
 <h3>Why It Feels Broken</h3><p>A rootfs is an environment. If it lacks `/proc`, process tools may fail. If it lacks shared libraries, dynamic binaries may fail. If it lacks DNS config, networking tools may fail. Container images exist because applications need more than a binary; they need a filesystem context.</p>

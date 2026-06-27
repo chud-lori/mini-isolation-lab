@@ -15,6 +15,7 @@ struct user_space {
     char path[32];
     char buffer[64];
     struct kfs_stat stat;
+    uint32_t stat_guard;
 };
 
 static const uint8_t readme_data[] = "hello kernel file";
@@ -148,6 +149,40 @@ static void test_write_rejects_bad_pointer(void)
     assert(capture.len == 0);
 }
 
+static void test_zero_length_user_ranges_are_allowed(void)
+{
+    reset_fs();
+    struct user_space user = {.path = "/readme.txt", .buffer = "unchanged"};
+    struct capture capture = {{0}, 0};
+    struct ktask task = test_task(&user, &capture);
+
+    struct ksyscall_result write_result = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_WRITE,
+        .arg0 = KSYSCALL_FD_STDOUT,
+        .arg1 = UINTPTR_MAX,
+        .arg2 = 0,
+    });
+    assert(write_result.error == KSYSCALL_OK);
+    assert(write_result.value == 0);
+    assert(capture.len == 0);
+
+    struct ksyscall_result open_result = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_OPEN,
+        .arg0 = (uintptr_t)user.path,
+        .arg1 = 11,
+    });
+    assert(open_result.error == KSYSCALL_OK);
+
+    struct ksyscall_result read_result = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_READ,
+        .arg0 = (uintptr_t)open_result.value,
+        .arg1 = UINTPTR_MAX,
+        .arg2 = 0,
+    });
+    assert(read_result.error == KSYSCALL_OK);
+    assert(read_result.value == 0);
+    assert(kmem_equal(user.buffer, "unchanged", 9));
+}
 
 static void test_repeated_read_reaches_eof(void)
 {
@@ -212,6 +247,24 @@ static void test_close_errors_and_read_after_close(void)
         .arg1 = (uintptr_t)user.buffer,
         .arg2 = 1,
     }).error == KSYSCALL_EBADF);
+
+    struct ksyscall_result reopened = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_OPEN,
+        .arg0 = (uintptr_t)user.path,
+        .arg1 = 11,
+    });
+    assert(reopened.error == KSYSCALL_OK);
+    assert(reopened.value == open_result.value);
+
+    struct ksyscall_result first_byte = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_READ,
+        .arg0 = (uintptr_t)reopened.value,
+        .arg1 = (uintptr_t)user.buffer,
+        .arg2 = 1,
+    });
+    assert(first_byte.error == KSYSCALL_OK);
+    assert(first_byte.value == 1);
+    assert(user.buffer[0] == 'h');
 }
 
 static void test_open_emfile(void)
@@ -259,6 +312,28 @@ static void test_stat_errors(void)
         .arg1 = 11,
         .arg2 = UINTPTR_MAX,
     }).error == KSYSCALL_EFAULT);
+}
+
+static void test_stat_populates_expected_layout(void)
+{
+    reset_fs();
+    struct user_space user = {.path = "/readme.txt", .stat_guard = 0xfeedbeef};
+    struct capture capture = {{0}, 0};
+    struct ktask task = test_task(&user, &capture);
+
+    struct ksyscall_result result = ksyscall_dispatch(&task, &(struct ksyscall_regs){
+        .nr = KSYSCALL_STAT,
+        .arg0 = (uintptr_t)user.path,
+        .arg1 = 11,
+        .arg2 = (uintptr_t)&user.stat,
+    });
+
+    assert(result.error == KSYSCALL_OK);
+    assert(result.value == 0);
+    assert(user.stat.size == sizeof(readme_data) - 1);
+    assert(user.stat.mode == KFS_MODE_FILE);
+    assert(user.stat.is_file);
+    assert(user.stat_guard == 0xfeedbeef);
 }
 
 static void test_open_rejects_bad_path_pointer(void)
@@ -309,9 +384,11 @@ void test_syscalls(void)
     test_close_errors_and_read_after_close();
     test_open_emfile();
     test_stat_errors();
+    test_stat_populates_expected_layout();
     test_open_rejects_bad_path_pointer();
     test_read_rejects_bad_fd();
     test_write_rejects_bad_pointer();
+    test_zero_length_user_ranges_are_allowed();
     test_getpid_and_exit();
     test_unknown_syscall();
 }

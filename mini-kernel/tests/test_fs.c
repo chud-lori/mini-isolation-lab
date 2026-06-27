@@ -40,6 +40,7 @@ static void test_node_helpers(void)
     assert(kfs_read_node(node, 0, out, 5) == 5);
     assert(kmem_equal(out, "hello", 5));
     assert(kfs_read_node(node, sizeof(readme_data), out, 5) == 0);
+    assert(kfs_read_node(node, 0, NULL, 0) == 0);
 }
 
 static void test_open_and_read(void)
@@ -63,6 +64,19 @@ static void test_open_and_read(void)
     bytes_read = 99;
     assert(kfs_read(&handle, out, sizeof(out), &bytes_read) == KFS_OK);
     assert(bytes_read == 0);
+}
+
+static void test_zero_length_read_does_not_touch_state(void)
+{
+    struct kfs_handle handle;
+    size_t bytes_read = 99;
+
+    assert(kfs_open("/readme.txt", &handle) == KFS_OK);
+    assert(handle.offset == 0);
+
+    assert(kfs_read(&handle, NULL, 0, &bytes_read) == KFS_OK);
+    assert(bytes_read == 0);
+    assert(handle.offset == 0);
 }
 
 static void test_empty_file(void)
@@ -95,6 +109,28 @@ static void test_path_stat(void)
     assert(kfs_stat(NULL, &stat) == KFS_EINVAL);
 }
 
+static void test_remount_replaces_visible_nodes(void)
+{
+    static const uint8_t alt_data[] = "replacement";
+    static const struct kfs_node alt_nodes[] = {
+        {.path = "/alt", .data = alt_data, .size = sizeof(alt_data) - 1, .mode = KFS_MODE_FILE},
+    };
+    struct kfs_stat stat;
+
+    assert(kfs_lookup("/readme.txt", 11) != NULL);
+
+    kfs_mount(NULL, 0);
+    assert(kfs_lookup("/readme.txt", 11) == NULL);
+    assert(kfs_stat("/readme.txt", &stat) == KFS_ENOENT);
+
+    kfs_mount(alt_nodes, sizeof(alt_nodes) / sizeof(alt_nodes[0]));
+    assert(kfs_lookup("/readme.txt", 11) == NULL);
+    assert(kfs_stat("/alt", &stat) == KFS_OK);
+    assert(stat.size == sizeof(alt_data) - 1);
+
+    reset_fs();
+}
+
 static void test_invalid_inputs(void)
 {
     struct kfs_handle handle;
@@ -120,7 +156,9 @@ void test_fs(void)
     test_lookup();
     test_node_helpers();
     test_open_and_read();
+    test_zero_length_read_does_not_touch_state();
     test_empty_file();
     test_path_stat();
+    test_remount_replaces_visible_nodes();
     test_invalid_inputs();
 }

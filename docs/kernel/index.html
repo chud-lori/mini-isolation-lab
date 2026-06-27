@@ -462,9 +462,11 @@
         <nav class="nav" aria-label="Page sections">
           <a href="#boot">Boot</a>
           <a href="#image">Image</a>
+          <a href="#status">Status</a>
           <a href="course/">Course</a>
           <a href="#userspace">Userspace</a>
           <a href="#syscalls">Syscalls</a>
+          <a href="#roadmap">Roadmap</a>
           <a href="#source">Source</a>
                   </nav>
       </div>
@@ -475,7 +477,7 @@
         <div>
           <div class="eyebrow">reset vector to kernel boundary</div>
           <h1>Mini Kernel</h1>
-          <p class="hero-copy">A standalone kernel workbench built around a tiny bootable image, a second-stage monitor, freestanding kernel objects, a read-only in-memory filesystem, and a syscall-like dispatcher small enough to inspect line by line.</p>
+          <p class="hero-copy">A standalone kernel workbench built around a working raw BIOS boot image, a second-stage monitor, freestanding kernel objects, a read-only in-memory filesystem, and a syscall-like dispatcher small enough to inspect line by line.</p>
           <div class="hero-actions">
             <a class="button primary" href="https://github.com/chud-lori/mini-isolation-lab/tree/main/mini-kernel">Source</a>
             <a class="button" href="course/">Read the course</a>
@@ -503,6 +505,11 @@ kernel: syscall entry; userspace: init program
 kernel objects:
   kernel/main.o
   kernel/syscall.o
+  kernel/syscall_entry.o
+  kernel/fs.o
+  kernel/user.o
+  kernel/arch/x86_64/gdt.o
+  kernel/arch/x86_64/idt.o
   kernel/arch/x86_64/serial.o</code></pre>
         </div>
       </section>
@@ -510,26 +517,26 @@ kernel objects:
       <section class="section" id="boot">
         <div class="section-header">
           <h2>Boot Flow</h2>
-          <p>The first pass follows the machine before there is a process, a shell, a filesystem, or a C runtime.</p>
+          <p>The working bootable path today follows the machine before there is a process, a shell, a filesystem, or a C runtime.</p>
         </div>
         <div class="flow">
           <div class="step"><span class="num">01</span><h3>Firmware</h3><p>BIOS reads the first disk sector into physical memory at <code>0x7c00</code> and jumps to it.</p></div>
           <div class="step"><span class="num">02</span><h3>Boot Sector</h3><p>The 512-byte loader sets real-mode state, saves the boot drive, and reads contiguous stage2 sectors.</p></div>
           <div class="step"><span class="num">03</span><h3>Stage2</h3><p>The monitor runs at <code>0800:0000</code>, handles simple commands, and names the next handoff: kernel, userspace, and the init program.</p></div>
-          <div class="step"><span class="num">04</span><h3>Kernel</h3><p>The freestanding kernel path owns serial logging, panic handling, checked helpers, file lookup, and syscall dispatch.</p></div>
+          <div class="step"><span class="num">04</span><h3>Kernel Scaffold</h3><p>The freestanding C kernel path owns serial logging, panic handling, checked helpers, file lookup, and syscall dispatch; serial and panic code compile as kernel objects, while the portable syscall, filesystem, descriptor, and userspace pieces are host-tested today.</p></div>
         </div>
       </section>
 
       <section class="section" id="image">
         <div class="section-header">
           <h2>Binary Layout</h2>
-          <p>Mini Kernel uses flat binaries for the BIOS path and keeps the future ELF kernel path separate.</p>
+          <p>Mini Kernel uses flat binaries for the current BIOS path and keeps the planned Limine/Multiboot ELF kernel path separate.</p>
         </div>
         <div class="grid-2">
           <div class="image-map" aria-label="Raw disk image layout">
             <div class="segment"><strong>offset 0</strong><span>bootsector.bin, exactly one sector, ends with <code>55 aa</code></span><em class="chip">LBA 0</em></div>
             <div class="segment"><strong>offset 512</strong><span>stage2.bin, padded to whole sectors and loaded by BIOS interrupt 13h</span><em class="chip">LBA 1+</em></div>
-            <div class="segment"><strong>later</strong><span>kernel ELF loading path for sections, symbols, and a cleaner handoff</span><em class="chip">ELF64</em></div>
+            <div class="segment"><strong>planned</strong><span>Limine/Multiboot-style kernel ELF path for sections, symbols, and a cleaner handoff</span><em class="chip">ELF64</em></div>
           </div>
           <div class="terminal">
             <div class="terminal-head"><div class="lights"><span></span><span></span><span></span></div><span>make image</span></div>
@@ -545,6 +552,17 @@ kernel objects:
         </div>
       </section>
 
+
+      <section class="section" id="status">
+        <div class="section-header">
+          <h2>Current Vs Planned</h2>
+          <p>The docs keep these paths separate so the boot status is clear.</p>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><h3>Works Today</h3><p><code>make all</code> builds the raw BIOS disk image, validates the 512-byte boot sector and sector-aligned stage2 monitor, compiles kernel objects including early GDT/IDT setup, and runs host tests for syscalls, filesystem behavior, syscall-entry frames, descriptor tables, and userspace init.</p></div>
+          <div class="panel"><h3>Planned Bootloader Path</h3><p><code>boot/multiboot2.S</code>, <code>boot/linker.ld</code>, and <code>boot/limine.cfg</code> are scaffolding for a Limine/Multiboot-style ELF kernel route. They are not the default working boot image yet.</p></div>
+        </div>
+      </section>
 
       <section class="section" id="userspace">
         <div class="section-header">
@@ -590,7 +608,10 @@ kernel objects:
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/syscall_entry.c"><strong>kernel/syscall_entry.c</strong><p>The trap-shaped syscall frame adapter that feeds the dispatcher.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/user.c"><strong>kernel/user.c</strong><p>The tiny userspace runner and built-in init program.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/fs.c"><strong>kernel/fs.c</strong><p>A tiny read-only in-memory filesystem for early files.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/arch/x86_64/gdt.c"><strong>kernel/arch/x86_64/gdt.c</strong><p>Host-tested x86_64 GDT and GDTR descriptor builders.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/kernel/arch/x86_64/idt.c"><strong>kernel/arch/x86_64/idt.c</strong><p>Host-tested x86_64 IDT gate and IDTR descriptor builders.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_syscall.c"><strong>tests/test_syscall.c</strong><p>Host tests for read, write, open, close, stat, getpid, exit, bad pointers, EOF, and fd errors.</p></a>
+          <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_arch.c"><strong>tests/test_arch.c</strong><p>Host tests for GDT and IDT descriptor layout, default table setup, exact segment bytes, and gate packing.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/tests/test_user.c"><strong>tests/test_user.c</strong><p>Host tests for the built-in userspace init program.</p></a>
           <a class="file" href="https://github.com/chud-lori/mini-isolation-lab/blob/main/mini-kernel/Makefile"><strong>Makefile</strong><p>Builds the image, validates sectors, and compiles kernel objects.</p></a>
         </div>
@@ -599,7 +620,7 @@ kernel objects:
       <section class="section" id="run">
         <div class="section-header">
           <h2>Build It</h2>
-          <p>The local build creates the raw image, runs host tests for syscalls, filesystem, syscall entry, and userspace init, then validates boot-sector constraints.</p>
+          <p>The local build creates the raw image, runs host tests for syscalls, filesystem, syscall entry, GDT/IDT descriptors, and userspace init, then validates boot-sector constraints.</p>
         </div>
         <div class="terminal">
           <div class="terminal-head"><div class="lights"><span></span><span></span><span></span></div><span>commands</span></div>
@@ -608,6 +629,19 @@ make all
 
 # when qemu-system-x86_64 is installed
 make run-image</code></pre>
+        </div>
+      </section>
+
+      <section class="section" id="roadmap">
+        <div class="section-header">
+          <h2>What To Build Next</h2>
+          <p>The next steps keep the lab small while turning tested pieces into booted pieces.</p>
+        </div>
+        <div class="grid-3">
+          <div class="panel"><h3>Boot Handoff</h3><p>Either link the C kernel into the BIOS stage2 handoff or make the Limine/Multiboot path the explicit bootloader route.</p></div>
+          <div class="panel"><h3>Fault Diagnostics</h3><p>Add real exception handlers to the loaded IDT so early CPU faults print useful register state instead of resetting silently.</p></div>
+          <div class="panel"><h3>User Mode</h3><p>Add a real trap entry and hardware ring-3 transition that populate the syscall frame already covered by host tests.</p></div>
+          <div class="panel"><h3>Program Loading</h3><p>Replace the built-in simulated init program with a tiny user binary loader and a minimal task lifecycle.</p></div>
         </div>
       </section>
     </main>

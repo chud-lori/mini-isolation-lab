@@ -26,6 +26,29 @@ static void die(const char *msg) {
     exit(EXIT_FAILURE);
 }
 
+static void explain_open_kvm_error(int err) {
+    fprintf(stderr, "open /dev/kvm: %s\n", strerror(err));
+    if (err == ENOENT || err == ENODEV) {
+        fprintf(stderr,
+                "hint: /dev/kvm is missing. Enable KVM virtualization in the "
+                "host kernel/firmware, load the kvm module, or run this on a "
+                "Linux host with hardware virtualization.\n");
+    } else if (err == EACCES || err == EPERM) {
+        fprintf(stderr,
+                "hint: permission denied. Add your user to the kvm group, fix "
+                "/dev/kvm permissions, or run with sudo for this demo.\n");
+    }
+}
+
+static int open_kvm_device(void) {
+    int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+    if (kvm_fd < 0) {
+        explain_open_kvm_error(errno);
+        exit(EXIT_FAILURE);
+    }
+    return kvm_fd;
+}
+
 static int kvm_ioctl(int fd, unsigned long request, void *arg) {
     int ret = ioctl(fd, request, arg);
     if (ret < 0) {
@@ -105,16 +128,22 @@ static void handle_io_exit(struct kvm_run *run) {
 }
 
 int main(void) {
-    int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
-    if (kvm_fd < 0) {
-        die("open /dev/kvm");
-    }
+    int kvm_fd = open_kvm_device();
 
     int api_version = ioctl(kvm_fd, KVM_GET_API_VERSION, 0);
+    if (api_version < 0) {
+        fprintf(stderr, "KVM_GET_API_VERSION: %s\n", strerror(errno));
+        close(kvm_fd);
+        return EXIT_FAILURE;
+    }
     if (api_version != KVM_API_VERSION) {
-        fprintf(stderr, "unsupported KVM API version: got %d expected %d\n",
+        fprintf(stderr,
+                "KVM API mismatch: kernel returned %d but these headers expect %d. "
+                "Build against headers matching the running kernel or use a "
+                "compatible host.\n",
                 api_version,
                 KVM_API_VERSION);
+        close(kvm_fd);
         return EXIT_FAILURE;
     }
 

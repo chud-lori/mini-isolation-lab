@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Part 10: MicroVM Memory Slots - Mini Isolation Lab</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"><link rel="stylesheet" href="../styles.css"></head>
+<body><div class="layout"><aside><div class="brand"><h1>Mini Isolation Lab</h1><p>Containers and microVMs from first principles.</p></div><div class="nav-label">Course Index</div><nav><ol class="course-nav">
+<li><a href="part-01-syscalls.html"><span class="num">01</span><span>Syscalls</span></a><ul class="subparts"><li>user mode vs kernel mode</li><li>write(2) manually</li><li>strace checkpoint</li></ul></li>
+<li><a href="part-02-memory.html"><span class="num">02</span><span>Memory</span></a><ul class="subparts"><li>virtual addresses</li><li>malloc vs mmap</li><li>guest RAM mapping</li></ul></li>
+<li><a href="part-03-processes.html"><span class="num">03</span><span>Processes</span></a><ul class="subparts"><li>clone basics</li><li>child stack</li><li>wait and lifecycle</li></ul></li>
+<li><a href="part-04-namespaces.html"><span class="num">04</span><span>Namespaces</span></a><ul class="subparts"><li>UTS namespace</li><li>isolated hostname</li><li>namespace mental model</li></ul></li>
+<li><a href="part-05-rootfs.html"><span class="num">05</span><span>Rootfs</span></a><ul class="subparts"><li>chroot path lookup</li><li>BusyBox rootfs</li><li>rootfs limitations</li></ul></li>
+<li><a href="part-06-cgroups.html"><span class="num">06</span><span>Cgroups</span></a><ul class="subparts"><li>cgroup v2 files</li><li>memory.max and pids.max</li><li>resource isolation</li></ul></li>
+<li><a href="part-07-container.html"><span class="num">07</span><span>Mini Container</span></a><ul class="subparts"><li>PID/mount/net namespaces</li><li>mount /proc</li><li>container gaps</li></ul></li>
+<li><a href="part-08-kvm.html"><span class="num">08</span><span>KVM API</span></a><ul class="subparts"><li>open /dev/kvm</li><li>ioctl handshake</li><li>VMM responsibility</li></ul></li>
+<li><a href="part-09-microvm.html"><span class="num">09</span><span>Mini Firecracker</span></a><ul class="subparts"><li>guest memory</li><li>KVM_RUN loop</li><li>VM exits and fake device</li></ul></li>
+<li><a class="active" href="part-10-microvm-memory.html"><span class="num">10</span><span>MicroVM Memory</span></a><ul class="subparts"><li>memory slots</li><li>capability check</li><li>guest physical map</li></ul></li>
+<li><a href="part-11-hardening.html"><span class="num">11</span><span>Container Hardening</span></a><ul class="subparts"><li>no_new_privs</li><li>seccomp strict</li><li>status inspection</li></ul></li>
+<li><a href="part-12-userns.html"><span class="num">12</span><span>User Namespace Mapping</span></a><ul class="subparts"><li>CLONE_NEWUSER</li><li>uid_map and gid_map</li><li>root inside namespace</li></ul></li>
+<li><a href="part-13-kvm-capabilities.html"><span class="num">13</span><span>KVM Capabilities</span></a><ul class="subparts"><li>microVM baseline</li><li>memory and irq caps</li><li>virtio eventfds</li></ul></li>
+<li><a href="part-14-capabilities.html"><span class="num">14</span><span>Capability Dropping</span></a><ul class="subparts"><li>capget/capset</li><li>CapEff inspection</li><li>raw socket check</li></ul></li>
+</ol></nav></aside><main><article class="article">
+<div class="part-label">Part 10</div><h2>MicroVM Memory Slots: Shaping Guest RAM</h2><details class="source-panel"><summary>Show source: src/part-10-microvm-memory/kvm_memory_slots.c</summary><pre><code class="language-c">#define _GNU_SOURCE
+
+#ifndef __linux__
+#error "kvm_memory_slots.c requires Linux KVM; build and run it on Linux."
+#endif
+
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;linux/kvm.h&gt;
+#include &lt;stdint.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/ioctl.h&gt;
+#include &lt;sys/mman.h&gt;
+#include &lt;unistd.h&gt;
+
+#define LOW_MEM_SIZE (1 * 1024 * 1024)
+#define HIGH_MEM_SIZE (1 * 1024 * 1024)
+#define HIGH_GPA 0x100000000ULL
+
+static void explain_open_kvm_error(int err) {
+    fprintf(stderr, "open /dev/kvm: %s\n", strerror(err));
+    if (err == ENOENT || err == ENODEV) {
+        fprintf(stderr,
+                "hint: /dev/kvm is missing. Enable KVM virtualization in the "
+                "host kernel/firmware, load the kvm module, or run this on a "
+                "Linux host with hardware virtualization.\n");
+    } else if (err == EACCES || err == EPERM) {
+        fprintf(stderr,
+                "hint: permission denied. Add your user to the kvm group, fix "
+                "/dev/kvm permissions, or run with sudo for this demo.\n");
+    }
+}
+
+static int open_kvm_device(void) {
+    int kvm_fd = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+    if (kvm_fd &lt; 0) {
+        explain_open_kvm_error(errno);
+        exit(EXIT_FAILURE);
+    }
+    return kvm_fd;
+}
+
+static int checked_ioctl(int fd,
+                         unsigned long request,
+                         unsigned long arg,
+                         const char *name) {
+    int ret = ioctl(fd, request, arg);
+    if (ret &lt; 0) {
+        fprintf(stderr, "%s: %s\n", name, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return ret;
+}
+
+static void *map_host_memory(size_t size, const char *label) {
+    void *addr = mmap(NULL,
+                      size,
+                      PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                      -1,
+                      0);
+    if (addr == MAP_FAILED) {
+        fprintf(stderr, "mmap %s: %s\n", label, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return addr;
+}
+
+static void set_memory_slot(int vm_fd,
+                            uint32_t slot,
+                            uint64_t guest_phys_addr,
+                            void *userspace_addr,
+                            uint64_t size,
+                            const char *label) {
+    struct kvm_userspace_memory_region region;
+    memset(&amp;region, 0, sizeof(region));
+    region.slot = slot;
+    region.guest_phys_addr = guest_phys_addr;
+    region.memory_size = size;
+    region.userspace_addr = (uint64_t)(uintptr_t)userspace_addr;
+
+    checked_ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, (unsigned long)&amp;region,
+                  "KVM_SET_USER_MEMORY_REGION");
+
+    printf("registered slot %u: guest 0x%llx..0x%llx -&gt; host %p (%s)\n",
+           slot,
+           (unsigned long long)guest_phys_addr,
+           (unsigned long long)(guest_phys_addr + size - 1),
+           userspace_addr,
+           label);
+}
+
+static void remove_memory_slot(int vm_fd, uint32_t slot, uint64_t guest_phys_addr) {
+    struct kvm_userspace_memory_region region;
+    memset(&amp;region, 0, sizeof(region));
+    region.slot = slot;
+    region.guest_phys_addr = guest_phys_addr;
+    region.memory_size = 0;
+
+    checked_ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, (unsigned long)&amp;region,
+                  "KVM_SET_USER_MEMORY_REGION remove");
+    printf("removed slot %u\n", slot);
+}
+
+int main(void) {
+    int kvm_fd = open_kvm_device();
+
+    int api_version = checked_ioctl(kvm_fd, KVM_GET_API_VERSION, 0,
+                                    "KVM_GET_API_VERSION");
+    printf("KVM API version: %d\n", api_version);
+    if (api_version != KVM_API_VERSION) {
+        fprintf(stderr,
+                "KVM API mismatch: kernel returned %d but these headers expect %d.\n",
+                api_version,
+                KVM_API_VERSION);
+        close(kvm_fd);
+        return EXIT_FAILURE;
+    }
+
+#ifdef KVM_CAP_NR_MEMSLOTS
+    int max_slots = checked_ioctl(kvm_fd, KVM_CHECK_EXTENSION,
+                                  KVM_CAP_NR_MEMSLOTS,
+                                  "KVM_CHECK_EXTENSION(KVM_CAP_NR_MEMSLOTS)");
+    printf("KVM reports %d memory slots available\n", max_slots);
+    if (max_slots &lt; 2) {
+        fprintf(stderr, "need at least two memory slots for this lesson\n");
+        close(kvm_fd);
+        return EXIT_FAILURE;
+    }
+#else
+    fprintf(stderr,
+            "these Linux headers do not define KVM_CAP_NR_MEMSLOTS; "
+            "install newer kernel headers for this lesson\n");
+    close(kvm_fd);
+    return EXIT_FAILURE;
+#endif
+
+    int vm_fd = checked_ioctl(kvm_fd, KVM_CREATE_VM, 0, "KVM_CREATE_VM");
+
+    uint8_t *low_mem = map_host_memory(LOW_MEM_SIZE, "low guest RAM");
+    uint8_t *high_mem = map_host_memory(HIGH_MEM_SIZE, "high guest RAM");
+    memcpy(low_mem, "slot 0: low guest RAM", sizeof("slot 0: low guest RAM"));
+    memcpy(high_mem, "slot 1: high guest RAM", sizeof("slot 1: high guest RAM"));
+
+    set_memory_slot(vm_fd, 0, 0, low_mem, LOW_MEM_SIZE, "boot/low memory");
+    set_memory_slot(vm_fd, 1, HIGH_GPA, high_mem, HIGH_MEM_SIZE,
+                    "device or high memory window");
+
+    printf("host check: slot 0 says \"%s\"\n", low_mem);
+    printf("host check: slot 1 says \"%s\"\n", high_mem);
+    printf("no vCPU was created; this lesson only shapes the guest physical map\n");
+
+    remove_memory_slot(vm_fd, 1, HIGH_GPA);
+    remove_memory_slot(vm_fd, 0, 0);
+
+    munmap(high_mem, HIGH_MEM_SIZE);
+    munmap(low_mem, LOW_MEM_SIZE);
+    close(vm_fd);
+    close(kvm_fd);
+    return EXIT_SUCCESS;
+}
+</code></pre></details>
+<p>The previous microVM lesson mapped one chunk of host memory as guest RAM and then ran a tiny vCPU. Real VMMs usually build a more deliberate guest physical address map: low RAM, high RAM, memory holes, device windows, and regions that can be added or removed over time.</p>
+<p>This follow-up does not boot a kernel or create a vCPU. It focuses on the memory map API that a VMM uses before guest code ever starts.</p>
+<h3>What A Memory Slot Means</h3><p>`KVM_SET_USER_MEMORY_REGION` tells KVM that a range of guest physical addresses is backed by a range of memory in the VMM process. The guest sees physical RAM. The host VMM sees ordinary process memory returned by `mmap`.</p>
+<pre><code class="language-text">guest physical 0x00000000..0x000fffff -> host mapping A
+guest physical 0x100000000..0x1000fffff -> host mapping B</code></pre>
+<p>Each registered range uses a slot number. Slot numbers are controlled by the VMM, and the host kernel reports how many slots it supports through `KVM_CAP_NR_MEMSLOTS`.</p>
+<h3>What The Demo Checks</h3><p>The program opens `/dev/kvm`, verifies the KVM API version, asks KVM how many memory slots are available, creates an empty VM, and registers two one-megabyte RAM regions. The second region starts at 4 GiB to show that guest physical memory does not need to be one flat host allocation.</p>
+<pre><code class="language-c">int max_slots = ioctl(kvm_fd, KVM_CHECK_EXTENSION,
+                      KVM_CAP_NR_MEMSLOTS);
+ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &amp;region);</code></pre>
+<h3>Run It</h3><pre><code class="language-bash">make part-10-microvm-memory
+./part-10-microvm-memory</code></pre>
+<p>Expected shape of the output:</p><pre><code class="language-text">KVM API version: 12
+KVM reports 509 memory slots available
+registered slot 0: guest 0x0..0xfffff -> host 0x... (boot/low memory)
+registered slot 1: guest 0x100000000..0x1000fffff -> host 0x... (device or high memory window)
+host check: slot 0 says "slot 0: low guest RAM"
+host check: slot 1 says "slot 1: high guest RAM"
+no vCPU was created; this lesson only shapes the guest physical map
+removed slot 1
+removed slot 0</code></pre>
+<p>If permission is denied, add your user to the `kvm` group and log in again, or run with `sudo` for the lesson. No root-only setup is required beyond access to `/dev/kvm`.</p>
+<h3>Why This Matters</h3><p>A production microVM needs a precise memory layout. The guest firmware or kernel expects RAM at specific addresses, while virtio-mmio devices, PCI windows, and reserved holes occupy other address ranges. KVM memory slots are the userspace VMM's way to describe that layout to the host kernel.</p>
+<div class="checkpoint"><strong>Checkpoint</strong><p>You should be able to explain the difference between host virtual memory, guest physical memory, and KVM memory slots.</p></div>
+<div class="next-prev"><a href="part-09-microvm.html">Previous: Mini Firecracker</a><a href="part-11-hardening.html">Next: Container Hardening</a></div>
+</article></main></div><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script><script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script></body></html>
